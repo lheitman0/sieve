@@ -475,4 +475,61 @@ describe("filterTwitterJson", () => {
       isFollowed: true,
     });
   });
+
+  it("reads author handle and follow state from the current user shape (core + relationship_perspectives)", async () => {
+    const tweet = (restId: string, user: Record<string, unknown>, text: string) => ({
+      entryId: `tweet-${restId}`,
+      content: {
+        itemContent: {
+          tweet_results: {
+            result: { __typename: "Tweet", rest_id: restId, core: { user_results: { result: user } }, legacy: { full_text: text } },
+          },
+        },
+      },
+    });
+    const payload = {
+      data: {
+        home: {
+          home_timeline_urt: {
+            instructions: [
+              {
+                type: "TimelineAddEntries",
+                entries: [
+                  tweet(
+                    "4001",
+                    {
+                      rest_id: "u40",
+                      core: { name: "Grifter", screen_name: "annoying_grifter" },
+                      relationship_perspectives: { following: false },
+                    },
+                    "10 prompts that print money",
+                  ),
+                  tweet(
+                    "4002",
+                    {
+                      rest_id: "u41",
+                      core: { name: "Friend", screen_name: "friend_hw" },
+                      relationship_perspectives: { following: true },
+                    },
+                    "new PCB rev came back",
+                  ),
+                ],
+              },
+            ],
+          },
+        },
+      },
+    };
+
+    const captured: FeedItem[] = [];
+    await filterTwitterJson(payload, "/i/api/graphql/abc/HomeTimeline", DEFAULT_CONFIG, async (items) => {
+      captured.push(...items);
+      return new Set();
+    });
+
+    expect(captured.map((i) => [i.creatorHandle, i.isFollowed])).toEqual([
+      ["annoying_grifter", false],
+      ["friend_hw", true],
+    ]);
+  });
 });

@@ -1146,8 +1146,9 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
       if (quoted) {
         const qBody = readTweetBody(quoted).trim();
         let qAuthor = "";
-        if (isRecord(quoted.core) && isRecord(quoted.core.user_results) && isRecord(quoted.core.user_results.result) && isRecord(quoted.core.user_results.result.legacy) && typeof quoted.core.user_results.result.legacy.screen_name === "string") {
-          qAuthor = `@${quoted.core.user_results.result.legacy.screen_name}`;
+        if (isRecord(quoted.core) && isRecord(quoted.core.user_results) && isRecord(quoted.core.user_results.result)) {
+          const quotedHandle = readScreenName(quoted.core.user_results.result);
+          if (quotedHandle) qAuthor = `@${quotedHandle}`;
         }
         if (qBody) {
           parts.push(`quoting ${qAuthor || "post"}: ${qBody.slice(0, 140)}`);
@@ -1199,17 +1200,17 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
       }
     }
   }
+  function readScreenName(user) {
+    if (isRecord(user.core) && typeof user.core.screen_name === "string") return user.core.screen_name;
+    if (isRecord(user.legacy) && typeof user.legacy.screen_name === "string") return user.legacy.screen_name;
+    return void 0;
+  }
   function readUserFollowFlag(userContainer) {
     if (!isRecord(userContainer)) return { following: false };
     const id = typeof userContainer.rest_id === "string" ? userContainer.rest_id : void 0;
-    let handle;
+    const handle = readScreenName(userContainer);
     let following = false;
-    if (isRecord(userContainer.legacy)) {
-      if (typeof userContainer.legacy.screen_name === "string") {
-        handle = userContainer.legacy.screen_name;
-      }
-      if (userContainer.legacy.following === true) following = true;
-    }
+    if (isRecord(userContainer.legacy) && userContainer.legacy.following === true) following = true;
     if (isRecord(userContainer.relationship_perspectives) && userContainer.relationship_perspectives.following === true) {
       following = true;
     }

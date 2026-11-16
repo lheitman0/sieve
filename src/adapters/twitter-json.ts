@@ -124,11 +124,10 @@ function buildTweetRichContext(tweet: JsonRecord): string | undefined {
       if (
         isRecord(quoted.core) &&
         isRecord(quoted.core.user_results) &&
-        isRecord(quoted.core.user_results.result) &&
-        isRecord(quoted.core.user_results.result.legacy) &&
-        typeof quoted.core.user_results.result.legacy.screen_name === "string"
+        isRecord(quoted.core.user_results.result)
       ) {
-        qAuthor = `@${quoted.core.user_results.result.legacy.screen_name}`;
+        const quotedHandle = readScreenName(quoted.core.user_results.result);
+        if (quotedHandle) qAuthor = `@${quotedHandle}`;
       }
       if (qBody) {
         parts.push(`quoting ${qAuthor || "post"}: ${qBody.slice(0, 140)}`);
@@ -195,6 +194,13 @@ function polishTweetPresentation(tweet: JsonRecord, config: SieveConfig, ytIds: 
   }
 }
 
+// Live X payloads carry screen_name on user.core; older payloads and fixtures use user.legacy.
+function readScreenName(user: JsonRecord): string | undefined {
+  if (isRecord(user.core) && typeof user.core.screen_name === "string") return user.core.screen_name;
+  if (isRecord(user.legacy) && typeof user.legacy.screen_name === "string") return user.legacy.screen_name;
+  return undefined;
+}
+
 function readUserFollowFlag(userContainer: unknown): {
   id?: string;
   handle?: string;
@@ -202,15 +208,10 @@ function readUserFollowFlag(userContainer: unknown): {
 } {
   if (!isRecord(userContainer)) return { following: false };
   const id = typeof userContainer.rest_id === "string" ? userContainer.rest_id : undefined;
-  let handle: string | undefined;
+  const handle = readScreenName(userContainer);
   let following = false;
 
-  if (isRecord(userContainer.legacy)) {
-    if (typeof userContainer.legacy.screen_name === "string") {
-      handle = userContainer.legacy.screen_name;
-    }
-    if (userContainer.legacy.following === true) following = true;
-  }
+  if (isRecord(userContainer.legacy) && userContainer.legacy.following === true) following = true;
   if (
     isRecord(userContainer.relationship_perspectives) &&
     userContainer.relationship_perspectives.following === true
