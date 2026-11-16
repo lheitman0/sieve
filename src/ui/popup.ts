@@ -150,6 +150,34 @@ const PLATFORM_CARDS: PlatformCardSpec[] = [
           c.x.restoreHeadlines = v;
         },
       },
+      {
+        label: "mute politics",
+        get: (c) => c.x.mutePolitics,
+        set: (c, v) => {
+          c.x.mutePolitics = v;
+        },
+      },
+      {
+        label: "mute sports",
+        get: (c) => c.x.muteSports,
+        set: (c, v) => {
+          c.x.muteSports = v;
+        },
+      },
+      {
+        label: "mute pop culture",
+        get: (c) => c.x.mutePopCulture,
+        set: (c, v) => {
+          c.x.mutePopCulture = v;
+        },
+      },
+      {
+        label: "mute viral clips & bait",
+        get: (c) => c.x.muteViralBait,
+        set: (c, v) => {
+          c.x.muteViralBait = v;
+        },
+      },
     ],
   },
   {

@@ -40,7 +40,11 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
       classicBird: true,
       cleanSidebar: true,
       cleanNav: true,
-      restoreHeadlines: true
+      restoreHeadlines: true,
+      mutePolitics: true,
+      muteSports: true,
+      mutePopCulture: true,
+      muteViralBait: true
     },
     instagram: {
       enabled: true,
@@ -104,7 +108,11 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
         classicBird: bool(x, "classicBird", d.x.classicBird),
         cleanSidebar: bool(x, "cleanSidebar", d.x.cleanSidebar),
         cleanNav: bool(x, "cleanNav", d.x.cleanNav),
-        restoreHeadlines: bool(x, "restoreHeadlines", d.x.restoreHeadlines)
+        restoreHeadlines: bool(x, "restoreHeadlines", d.x.restoreHeadlines),
+        mutePolitics: bool(x, "mutePolitics", d.x.mutePolitics),
+        muteSports: bool(x, "muteSports", d.x.muteSports),
+        mutePopCulture: bool(x, "mutePopCulture", d.x.mutePopCulture),
+        muteViralBait: bool(x, "muteViralBait", d.x.muteViralBait)
       },
       instagram: {
         enabled: bool(ig, "enabled", d.instagram.enabled),
@@ -264,6 +272,34 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
           get: (c) => c.x.restoreHeadlines,
           set: (c, v) => {
             c.x.restoreHeadlines = v;
+          }
+        },
+        {
+          label: "mute politics",
+          get: (c) => c.x.mutePolitics,
+          set: (c, v) => {
+            c.x.mutePolitics = v;
+          }
+        },
+        {
+          label: "mute sports",
+          get: (c) => c.x.muteSports,
+          set: (c, v) => {
+            c.x.muteSports = v;
+          }
+        },
+        {
+          label: "mute pop culture",
+          get: (c) => c.x.mutePopCulture,
+          set: (c, v) => {
+            c.x.mutePopCulture = v;
+          }
+        },
+        {
+          label: "mute viral clips & bait",
+          get: (c) => c.x.muteViralBait,
+          set: (c, v) => {
+            c.x.muteViralBait = v;
           }
         }
       ]

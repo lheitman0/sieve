@@ -42,7 +42,11 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
       classicBird: true,
       cleanSidebar: true,
       cleanNav: true,
-      restoreHeadlines: true
+      restoreHeadlines: true,
+      mutePolitics: true,
+      muteSports: true,
+      mutePopCulture: true,
+      muteViralBait: true
     },
     instagram: {
       enabled: true,
@@ -106,7 +110,11 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
         classicBird: bool(x, "classicBird", d.x.classicBird),
         cleanSidebar: bool(x, "cleanSidebar", d.x.cleanSidebar),
         cleanNav: bool(x, "cleanNav", d.x.cleanNav),
-        restoreHeadlines: bool(x, "restoreHeadlines", d.x.restoreHeadlines)
+        restoreHeadlines: bool(x, "restoreHeadlines", d.x.restoreHeadlines),
+        mutePolitics: bool(x, "mutePolitics", d.x.mutePolitics),
+        muteSports: bool(x, "muteSports", d.x.muteSports),
+        mutePopCulture: bool(x, "mutePopCulture", d.x.mutePopCulture),
+        muteViralBait: bool(x, "muteViralBait", d.x.muteViralBait)
       },
       instagram: {
         enabled: bool(ig, "enabled", d.instagram.enabled),

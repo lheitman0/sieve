@@ -585,7 +585,11 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
       classicBird: true,
       cleanSidebar: true,
       cleanNav: true,
-      restoreHeadlines: true
+      restoreHeadlines: true,
+      mutePolitics: true,
+      muteSports: true,
+      mutePopCulture: true,
+      muteViralBait: true
     },
     instagram: {
       enabled: true,
@@ -649,7 +653,11 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
         classicBird: bool(x, "classicBird", d.x.classicBird),
         cleanSidebar: bool(x, "cleanSidebar", d.x.cleanSidebar),
         cleanNav: bool(x, "cleanNav", d.x.cleanNav),
-        restoreHeadlines: bool(x, "restoreHeadlines", d.x.restoreHeadlines)
+        restoreHeadlines: bool(x, "restoreHeadlines", d.x.restoreHeadlines),
+        mutePolitics: bool(x, "mutePolitics", d.x.mutePolitics),
+        muteSports: bool(x, "muteSports", d.x.muteSports),
+        mutePopCulture: bool(x, "mutePopCulture", d.x.mutePopCulture),
+        muteViralBait: bool(x, "muteViralBait", d.x.muteViralBait)
       },
       instagram: {
         enabled: bool(ig, "enabled", d.instagram.enabled),
@@ -930,6 +938,357 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
     return scoreSlopCadence(text, ctx) >= threshold;
   }
 
+  // src/core/topics.ts
+  function terms(list) {
+    return list.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s+")).join("|");
+  }
+  var wordRe = (list, flags = "i") => new RegExp(`\\b(?:${terms(list)})\\b`, flags);
+  var SPORTS_LEAGUES = ["nfl", "nba", "mlb", "nhl", "mls", "wnba", "ncaa", "ufc", "pga tour", "liv golf", "espn"];
+  var LEXICONS = {
+    politics: {
+      strong: wordRe([
+        "trump",
+        "biden",
+        "kamala",
+        "jd vance",
+        "desantis",
+        "newsom",
+        "pelosi",
+        "schumer",
+        "mcconnell",
+        "aoc",
+        "mamdani",
+        "rfk jr",
+        "maga",
+        "gop",
+        "democrats",
+        "republicans",
+        "white house",
+        "supreme court",
+        "executive order",
+        "impeach",
+        "impeachment",
+        "left-wing",
+        "right-wing",
+        "netanyahu",
+        "zelensky",
+        "putin",
+        "hamas",
+        "gaza",
+        "tariffs",
+        "senator",
+        "congressman",
+        "congresswoman",
+        "midterms",
+        "filibuster",
+        "antifa",
+        "leftists",
+        "groyper",
+        "groypers",
+        "fascist",
+        "fascism"
+      ]),
+      weak: wordRe(
+        [
+          "election",
+          "elections",
+          "voters",
+          "voting",
+          "ballot",
+          "congress",
+          "senate",
+          "governor",
+          "president",
+          "administration",
+          "partisan",
+          "campaign",
+          "protest",
+          "protesters",
+          "immigration",
+          "deportation",
+          "legislation",
+          "regime",
+          "democracy",
+          "socialism",
+          "communism",
+          "liberals",
+          "conservatives",
+          "politician",
+          "politicians",
+          "political"
+        ],
+        "gi"
+      ),
+      weakNeeded: 2,
+      profile: wordRe([
+        "political commentator",
+        "political analyst",
+        "politics reporter",
+        "conservative",
+        "progressive",
+        "maga",
+        "patriot",
+        "america first",
+        "democrat",
+        "republican",
+        "senator",
+        "congressman",
+        "congresswoman"
+      ])
+    },
+    sports: {
+      strong: wordRe([
+        ...SPORTS_LEAGUES,
+        "premier league",
+        "champions league",
+        "la liga",
+        "serie a",
+        "bundesliga",
+        "world cup",
+        "super bowl",
+        "stanley cup",
+        "world series",
+        "march madness",
+        "final four",
+        "grand prix",
+        "formula 1",
+        "touchdown",
+        "home run",
+        "hat-trick",
+        "hat trick",
+        "quarterback",
+        "wide receiver",
+        "point guard",
+        "heisman",
+        "free agency",
+        "trade deadline",
+        "box score",
+        "first overall pick",
+        "usmnt",
+        "uswnt",
+        "lebron",
+        "kobe",
+        "mahomes",
+        "messi",
+        "ronaldo",
+        "ohtani",
+        "wembanyama",
+        "steph curry",
+        "lakers",
+        "celtics",
+        "knicks",
+        "sixers",
+        "76ers",
+        "nuggets",
+        "timberwolves",
+        "cavaliers",
+        "blazers",
+        "yankees",
+        "dodgers",
+        "red sox",
+        "cubs",
+        "cowboys",
+        "49ers",
+        "steelers",
+        "packers",
+        "ravens",
+        "bengals",
+        "broncos",
+        "real madrid",
+        "man city",
+        "man united",
+        "manchester united",
+        "manchester city",
+        "tottenham",
+        "draftkings",
+        "fanduel",
+        "parlay",
+        "sportscenter"
+      ]),
+      weak: wordRe(
+        [
+          "football",
+          "basketball",
+          "baseball",
+          "hockey",
+          "soccer",
+          "game",
+          "games",
+          "season",
+          "coach",
+          "playoffs",
+          "playoff",
+          "roster",
+          "draft",
+          "league",
+          "championship",
+          "mvp",
+          "stadium",
+          "highlights",
+          "scored",
+          "goal",
+          "goals",
+          "assists",
+          "rookie",
+          "dunk",
+          "pitcher",
+          "inning",
+          "matchday",
+          "striker",
+          "postgame",
+          "pregame",
+          "halftime",
+          "overtime",
+          "qb",
+          "interception",
+          "yard",
+          "yards",
+          "td",
+          "locker room",
+          "free agent",
+          "national champion",
+          "fans"
+        ],
+        "gi"
+      ),
+      weakNeeded: 3,
+      profile: wordRe([
+        ...SPORTS_LEAGUES,
+        "sports",
+        "football",
+        "basketball",
+        "baseball",
+        "hockey",
+        "soccer",
+        "rugby",
+        "hoops",
+        "barstool",
+        "pardon my take",
+        "sportsbook",
+        "fantasy football",
+        "college football",
+        "pxp",
+        "play-by-play",
+        "i record ball",
+        "die hard",
+        "49ers",
+        "steelers",
+        "seahawks",
+        "falcons",
+        "bears fan",
+        "padres",
+        "cyclones"
+      ]),
+      // Case-sensitive: leagues appear capitalised in handles (MikeKennedyNFL), while "nba" hides in "thorstenball".
+      handle: /NFL|NBA|MLB|NHL|ESPN|[Bb]arstool|[Hh]oops|[Ss]ports|[Ff]ootball/
+    },
+    "pop-culture": {
+      strong: wordRe([
+        "taylor swift",
+        "kardashian",
+        "kardashians",
+        "kanye",
+        "beyonce",
+        "beyonc\xE9",
+        "rihanna",
+        "drake",
+        "bad bunny",
+        "sabrina carpenter",
+        "ariana grande",
+        "selena gomez",
+        "justin bieber",
+        "travis kelce",
+        "love island",
+        "the bachelor",
+        "real housewives",
+        "met gala",
+        "oscars",
+        "grammys",
+        "emmys",
+        "golden globes",
+        "red carpet",
+        "box office",
+        "celebrity",
+        "celebrities",
+        "celeb",
+        "tmz",
+        "k-pop",
+        "kpop",
+        "bts",
+        "blackpink",
+        "swifties",
+        "stan twitter",
+        "netflix series",
+        "gta 6",
+        "gta vi",
+        "snl"
+      ]),
+      weak: wordRe(
+        [
+          "album",
+          "tour",
+          "concert",
+          "dating",
+          "breakup",
+          "actor",
+          "actress",
+          "singer",
+          "rapper",
+          "movie",
+          "trailer",
+          "episode",
+          "premiere",
+          "finale",
+          "award",
+          "awards",
+          "music video",
+          "netflix",
+          "hbo",
+          "billboard",
+          "chart",
+          "paparazzi"
+        ],
+        "gi"
+      ),
+      weakNeeded: 2,
+      profile: wordRe(["entertainment news", "celebrity news", "pop culture", "film news", "tv news", "saturday night live"])
+    }
+  };
+  var URL_OR_MENTION_RE = /https?:\/\/\S+|@\w+/g;
+  var MEDIA_TAG_RE = /\[(?:video|photo|gif)(?:\+\w+)*\]/;
+  var QUOTE_TAG_RE = /(?:^|\| )quoting @/;
+  function ownWordCount(text) {
+    return (text.replace(URL_OR_MENTION_RE, " ").match(/[\p{L}\p{N}']+/gu) ?? []).length;
+  }
+  function matchMutedTopic(ownText, secondaryText, author, topics) {
+    const text = secondaryText ? `${ownText} ${secondaryText}` : ownText;
+    const shortMediaOrQuote = (MEDIA_TAG_RE.test(secondaryText ?? "") || QUOTE_TAG_RE.test(secondaryText ?? "")) && ownWordCount(ownText) <= 20;
+    for (const topic of topics) {
+      const lex = LEXICONS[topic];
+      if (lex.strong.test(text)) return topic;
+      const hits = new Set((text.match(lex.weak) ?? []).map((m) => m.toLowerCase().replace(/\s+/g, " "))).size;
+      if (hits >= lex.weakNeeded) return topic;
+      const topicAccount = author.profile !== void 0 && lex.profile.test(author.profile) || author.handle !== void 0 && lex.handle?.test(author.handle) === true;
+      if (topicAccount && (hits >= 1 || shortMediaOrQuote)) return topic;
+    }
+    return void 0;
+  }
+  var MILD_REACTION_RE = /(?:[😭💀🤣😂😳🥶🤯😱]|\b(?:pov|lmao|lmfao|l+o+l{2,}|wait for it|watch till the end|caught (?:in 4k|on camera)|how is this real|bruh)\b)/iu;
+  var CRUDE_REACTION_RE = /\b(?:nigga|fucking|dawg)\b/i;
+  var HYPE_BAIT_RE = /\b(?:(?:are|is) so cooked|save (?:this )?rn|wtf this is crazy)\b/i;
+  function isViralBait(ownText, secondaryText, likes) {
+    if (HYPE_BAIT_RE.test(ownText)) return true;
+    const hasMedia = MEDIA_TAG_RE.test(secondaryText ?? "");
+    const isQuote = QUOTE_TAG_RE.test(secondaryText ?? "");
+    if (!hasMedia && !isQuote) return false;
+    const words = ownWordCount(ownText);
+    if (hasMedia && words <= 1) return true;
+    if (words > 14) return false;
+    const own = ownText.replace(URL_OR_MENTION_RE, " ");
+    if (CRUDE_REACTION_RE.test(own)) return true;
+    return hasMedia && (MILD_REACTION_RE.test(own) || words <= 3 && (likes ?? 0) >= 2e4);
+  }
+
   // src/core/sieve.ts
   var COMMENT_BAIT_RE = /\bcomment\s+["'“”]?[a-z0-9_-]{2,20}["'“”]?\s+(and\s+i'?ll|to\s+get|for\s+the|for\s+my)\s+(dm|send|link|free|guide|template)\b/i;
   var CRYPTO_CASINO_SPAM_RE = /\b(use\s+code\s+\w+\s+on\s+stake|100x\s+memecoin|telegram\s+pump\s+group|free\s+airdrop\s+link\s+in\s+bio)\b/i;
@@ -987,6 +1346,23 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
     const fullText = `${item.titleOrText} ${item.secondaryText ?? ""}`;
     for (const [pattern, reason] of TEXT_PATTERNS) {
       if (pattern.test(fullText)) return drop(reason);
+    }
+    if (item.platform === "x" && item.surface === "home" && !item.isFollowed) {
+      const muted = /* @__PURE__ */ new Set();
+      if (config2.x.mutePolitics) muted.add("politics");
+      if (config2.x.muteSports) muted.add("sports");
+      if (config2.x.mutePopCulture) muted.add("pop-culture");
+      const topic = muted.size > 0 ? matchMutedTopic(
+        item.titleOrText,
+        item.secondaryText,
+        { handle: item.creatorHandle, profile: item.creatorProfile },
+        muted
+      ) : void 0;
+      if (topic) return drop(topic);
+      if (keys.some((k) => seeds2.personalAllow.has(k))) return KEEP;
+      if (config2.x.muteViralBait && isViralBait(item.titleOrText, item.secondaryText, item.metrics?.likes)) {
+        return drop("viral-bait");
+      }
     }
     if (!item.isFollowed) {
       if (item.platform === "x" && config2.x.slopCadenceFilter) {
@@ -1214,7 +1590,21 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
     if (isRecord(userContainer.relationship_perspectives) && userContainer.relationship_perspectives.following === true) {
       following = true;
     }
-    return { id, handle, following };
+    return { id, handle, profile: readUserProfile(userContainer), following };
+  }
+  function readUserProfile(user) {
+    const parts = [];
+    if (isRecord(user.profile_bio) && typeof user.profile_bio.description === "string") {
+      parts.push(user.profile_bio.description);
+    } else if (isRecord(user.legacy) && typeof user.legacy.description === "string") {
+      parts.push(user.legacy.description);
+    }
+    const label = user.affiliates_highlighted_label;
+    if (isRecord(label) && isRecord(label.label) && typeof label.label.description === "string") {
+      parts.push(label.label.description);
+    }
+    const joined = parts.join(" \xB7 ").trim();
+    return joined || void 0;
   }
   function extractTweetItem(tweet, surface, ytIds, socialContextFollowing) {
     const id = typeof tweet.rest_id === "string" ? tweet.rest_id : "";
@@ -1240,6 +1630,7 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
       id,
       creatorId: outerAuthor.id,
       creatorHandle: outerAuthor.handle,
+      ...outerAuthor.profile ? { creatorProfile: outerAuthor.profile } : {},
       isFollowed,
       surface,
       titleOrText: text,
@@ -1253,7 +1644,7 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
     if (!isRecord(data)) return data;
     const isProfilePayload = isRecord(data.data) && isRecord(data.data.user);
     const isAdsOnlySurface = isProfilePayload || urlPath.includes("/HomeLatestTimeline") || urlPath.includes("/TweetDetail") || urlPath.includes("/UserTweets") || urlPath.includes("/UserMedia") || urlPath.includes("/HighlightsTweets") || urlPath.includes("/Likes");
-    const surface = urlPath.includes("/SearchTimeline") ? "search" : "timeline";
+    const surface = urlPath.includes("/SearchTimeline") ? "search" : urlPath.includes("/HomeTimeline") ? "home" : "timeline";
     const candidates = /* @__PURE__ */ new Map();
     const entryRefs = [];
     function extractEntryId(entry) {
@@ -2380,7 +2771,8 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
   var seeds = {
     hnVideos: /* @__PURE__ */ new Set(),
     hnChannels: /* @__PURE__ */ new Set(),
-    slopChannels: /* @__PURE__ */ new Set()
+    slopChannels: /* @__PURE__ */ new Set(),
+    personalAllow: /* @__PURE__ */ new Set()
   };
   var memory = createMemoryStore();
   var novelty = createNoveltyMemory();
@@ -2406,7 +2798,9 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
     await Promise.all([
       loadSeedSet("assets/seeds/hn-videos.txt", seeds.hnVideos),
       loadSeedSet("assets/seeds/hn-channels.txt", seeds.hnChannels),
-      loadSeedSet("assets/seeds/slop-channels.txt", seeds.slopChannels)
+      loadSeedSet("assets/seeds/slop-channels.txt", seeds.slopChannels),
+      // Personal, gitignored; built from your own X likes/bookmarks. Absent in a fresh clone.
+      loadSeedSet("assets/seeds/personal-allow.txt", seeds.personalAllow)
     ]);
   }
   browser.storage.onChanged.addListener((changes, area) => {

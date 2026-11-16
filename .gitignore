@@ -2,3 +2,5 @@
 /dist/
 /.web-ext-artifacts/
 .DS_Store
+# Personal seed lists built from your own account activity; never commit.
+/extension/assets/seeds/personal-*.txt

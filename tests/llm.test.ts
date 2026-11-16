@@ -62,6 +62,7 @@ describe("gradeItemsBatch and runSieveOnBatch", () => {
       hnVideos: new Set(),
       hnChannels: new Set(),
       slopChannels: new Set(),
+      personalAllow: new Set(),
     };
     const mockFetch: typeof fetch = async () =>
       new Response(
@@ -94,6 +95,7 @@ describe("gradeItemsBatch and runSieveOnBatch", () => {
       hnVideos: new Set(),
       hnChannels: new Set(),
       slopChannels: new Set(),
+      personalAllow: new Set(),
     };
     const fastTimeoutConfig: SieveConfig = {
       ...LOCAL_GRADER_CONFIG,
@@ -143,6 +145,7 @@ describe("gradeItemsBatch and runSieveOnBatch", () => {
       hnVideos: new Set(),
       hnChannels: new Set(),
       slopChannels: new Set(),
+      personalAllow: new Set(),
     };
     const failingFetch: typeof fetch = async () => new Response("Unavailable", { status: 503 });
 

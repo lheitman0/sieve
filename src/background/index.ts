@@ -38,6 +38,7 @@ const seeds: SeedSets = {
   hnVideos: new Set(),
   hnChannels: new Set(),
   slopChannels: new Set(),
+  personalAllow: new Set(),
 };
 
 const memory = createMemoryStore();
@@ -69,6 +70,8 @@ async function initConfigAndSeeds(): Promise<void> {
     loadSeedSet("assets/seeds/hn-videos.txt", seeds.hnVideos),
     loadSeedSet("assets/seeds/hn-channels.txt", seeds.hnChannels),
     loadSeedSet("assets/seeds/slop-channels.txt", seeds.slopChannels),
+    // Personal, gitignored; built from your own X likes/bookmarks. Absent in a fresh clone.
+    loadSeedSet("assets/seeds/personal-allow.txt", seeds.personalAllow),
   ]);
 }
 

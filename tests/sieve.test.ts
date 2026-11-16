@@ -8,6 +8,7 @@ function makeSeeds(overrides: Partial<SeedSets> = {}): SeedSets {
     hnVideos: overrides.hnVideos ?? new Set(["hnVid000001"]),
     hnChannels: overrides.hnChannels ?? new Set(["3blue1brown", "uc_hn_trusted"]),
     slopChannels: overrides.slopChannels ?? new Set(["aislopfarm99", "uc_slop_1"]),
+    personalAllow: overrides.personalAllow ?? new Set(),
   };
 }
 
@@ -200,5 +201,63 @@ describe("evaluateLocalTiers", () => {
     expect(evaluateLocalTiers(sirenBait, DEFAULT_CONFIG, makeSeeds(), emptyMemory).verdict).toBe("drop");
     expect(evaluateLocalTiers(illegalTools, DEFAULT_CONFIG, makeSeeds(), emptyMemory).verdict).toBe("drop");
     expect(evaluateLocalTiers(shortDrama, DEFAULT_CONFIG, makeSeeds(), emptyMemory).verdict).toBe("drop");
+  });
+});
+
+describe("X topic mutes", () => {
+  const post = (overrides: Partial<FeedItem>): FeedItem => ({
+    platform: "x",
+    id: "p1",
+    creatorHandle: "someone",
+    isFollowed: false,
+    surface: "home",
+    titleOrText: "",
+    ...overrides,
+  });
+  const decide = (item: FeedItem, seeds = makeSeeds()) => evaluateLocalTiers(item, DEFAULT_CONFIG, seeds, emptyMemory);
+
+  it("mutes short media posts from accounts whose bio or handle marks them as sports media", () => {
+    const byBio = post({
+      creatorHandle: "perf_clips",
+      creatorProfile: "Daily football performances and content.",
+      titleOrText: "JSN FALL DOWN ROUTE FOR A 71 YARD TD https://t.co/x",
+      secondaryText: "[video]",
+    });
+    const byHandle = post({ creatorHandle: "MikeKennedyNFL", titleOrText: "What a way to lose it", secondaryText: "[video]" });
+    expect(decide(byBio)).toEqual({ verdict: "drop", reason: "sports" });
+    expect(decide(byHandle)).toEqual({ verdict: "drop", reason: "sports" });
+  });
+
+  it("does not mute on a topic word in the bio alone, on substrings inside handles, or on ambiguous words", () => {
+    const nflInBio = post({
+      creatorProfile: "multiplayer harness for work; prev computer vision for the NFL",
+      titleOrText: "cloud agents are the way forward, but your laptop can't be always reachable",
+    });
+    const nbaInsideHandle = post({ creatorHandle: "thorstenball", titleOrText: "We have one meeting per week. Here's how we run it", secondaryText: "[photo]" });
+    const wokeUp = post({ titleOrText: "Bad news for X, I woke up and found out about the 20 image limit. Stamps I created vol. 1", secondaryText: "[photo]" });
+    expect(decide(nflInBio).verdict).toBe("uncertain");
+    expect(decide(nbaInsideHandle).verdict).toBe("uncertain");
+    expect(decide(wokeUp).verdict).toBe("uncertain");
+  });
+
+  it("never mutes followed accounts", () => {
+    const followedTeam = post({ creatorHandle: "CycloneMBB", isFollowed: true, titleOrText: "Bully #Cyclones playoff dunk", secondaryText: "[video]" });
+    expect(decide(followedTeam).verdict).toBe("keep");
+  });
+
+  it("lets liked authors skip the viral-bait filter but still applies topic mutes to them", () => {
+    const seeds = makeSeeds({ personalAllow: new Set(["liked_author"]) });
+    const bareVideo = post({ creatorHandle: "liked_author", titleOrText: "https://t.co/x", secondaryText: "[video]" });
+    const politics = post({ creatorHandle: "liked_author", titleOrText: "Trump just signed another executive order" });
+    expect(decide(bareVideo, seeds).verdict).toBe("keep");
+    expect(decide(bareVideo).verdict).toBe("drop");
+    expect(decide(politics, seeds)).toEqual({ verdict: "drop", reason: "politics" });
+  });
+
+  it("leaves pinned topic tabs and search alone", () => {
+    const nbaClip = { creatorHandle: "LegionHoops", titleOrText: "MAXEY LOB TO LEBRON IN TRANSITION", secondaryText: "[video]" };
+    expect(decide(post({ ...nbaClip, surface: "home" })).verdict).toBe("drop");
+    expect(decide(post({ ...nbaClip, surface: "timeline" })).verdict).toBe("uncertain");
+    expect(decide(post({ ...nbaClip, surface: "search" })).verdict).toBe("uncertain");
   });
 });

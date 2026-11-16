@@ -204,6 +204,7 @@ function readScreenName(user: JsonRecord): string | undefined {
 function readUserFollowFlag(userContainer: unknown): {
   id?: string;
   handle?: string;
+  profile?: string;
   following: boolean;
 } {
   if (!isRecord(userContainer)) return { following: false };
@@ -218,7 +219,22 @@ function readUserFollowFlag(userContainer: unknown): {
   ) {
     following = true;
   }
-  return { id, handle, following };
+  return { id, handle, profile: readUserProfile(userContainer), following };
+}
+
+function readUserProfile(user: JsonRecord): string | undefined {
+  const parts: string[] = [];
+  if (isRecord(user.profile_bio) && typeof user.profile_bio.description === "string") {
+    parts.push(user.profile_bio.description);
+  } else if (isRecord(user.legacy) && typeof user.legacy.description === "string") {
+    parts.push(user.legacy.description);
+  }
+  const label = user.affiliates_highlighted_label;
+  if (isRecord(label) && isRecord(label.label) && typeof label.label.description === "string") {
+    parts.push(label.label.description);
+  }
+  const joined = parts.join(" · ").trim();
+  return joined || undefined;
 }
 
 function extractTweetItem(
@@ -259,6 +275,7 @@ function extractTweetItem(
     id,
     creatorId: outerAuthor.id,
     creatorHandle: outerAuthor.handle,
+    ...(outerAuthor.profile ? { creatorProfile: outerAuthor.profile } : {}),
     isFollowed,
     surface,
     titleOrText: text,
@@ -288,7 +305,11 @@ export async function filterTwitterJson(
     urlPath.includes("/UserMedia") ||
     urlPath.includes("/HighlightsTweets") ||
     urlPath.includes("/Likes");
-  const surface: FeedSurface = urlPath.includes("/SearchTimeline") ? "search" : "timeline";
+  const surface: FeedSurface = urlPath.includes("/SearchTimeline")
+    ? "search"
+    : urlPath.includes("/HomeTimeline")
+      ? "home"
+      : "timeline";
 
   interface EntryRef {
     list: unknown[];

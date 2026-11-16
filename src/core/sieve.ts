@@ -13,6 +13,7 @@ import type {
 import { normalizeHandle } from "./dehype.js";
 import { gradeItemsBatch } from "./llm.js";
 import { isStructuralSlop } from "./slop-cadence.js";
+import { isViralBait, matchMutedTopic, type MutedTopic } from "./topics.js";
 
 const COMMENT_BAIT_RE =
   /\bcomment\s+["'“”]?[a-z0-9_-]{2,20}["'“”]?\s+(and\s+i'?ll|to\s+get|for\s+the|for\s+my)\s+(dm|send|link|free|guide|template)\b/i;
@@ -100,6 +101,30 @@ export function evaluateLocalTiers(
   const fullText = `${item.titleOrText} ${item.secondaryText ?? ""}`;
   for (const [pattern, reason] of TEXT_PATTERNS) {
     if (pattern.test(fullText)) return drop(reason);
+  }
+
+  // Topic and bait mutes apply to the algorithmic For You feed only. Pinned topic tabs
+  // (e.g. an NBA timeline), lists, Explore and search are feeds you opened on purpose.
+  if (item.platform === "x" && item.surface === "home" && !item.isFollowed) {
+    const muted = new Set<MutedTopic>();
+    if (config.x.mutePolitics) muted.add("politics");
+    if (config.x.muteSports) muted.add("sports");
+    if (config.x.mutePopCulture) muted.add("pop-culture");
+    const topic =
+      muted.size > 0
+        ? matchMutedTopic(
+            item.titleOrText,
+            item.secondaryText,
+            { handle: item.creatorHandle, profile: item.creatorProfile },
+            muted,
+          )
+        : undefined;
+    if (topic) return drop(topic);
+    // Authors you liked/bookmarked: their style is trusted, but topics you muted still apply.
+    if (keys.some((k) => seeds.personalAllow.has(k))) return KEEP;
+    if (config.x.muteViralBait && isViralBait(item.titleOrText, item.secondaryText, item.metrics?.likes)) {
+      return drop("viral-bait");
+    }
   }
 
   if (!item.isFollowed) {

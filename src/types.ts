@@ -20,6 +20,10 @@ export type DropReason =
   | "remembered"
   | "learned-creator"
   | "ratio"
+  | "politics"
+  | "sports"
+  | "pop-culture"
+  | "viral-bait"
   | "llm";
 
 export type TierDecision = { verdict: "drop"; reason: DropReason } | { verdict: "keep" | "uncertain" };
@@ -50,6 +54,10 @@ interface TwitterSettings {
   cleanSidebar: boolean;
   cleanNav: boolean;
   restoreHeadlines: boolean;
+  mutePolitics: boolean;
+  muteSports: boolean;
+  mutePopCulture: boolean;
+  muteViralBait: boolean;
 }
 
 interface InstagramSettings {
@@ -96,6 +104,8 @@ export interface FeedItem {
   id: string;
   creatorId?: string;
   creatorHandle?: string;
+  /** Creator bio and affiliation label, used to recognise topic accounts (sports media, etc.). */
+  creatorProfile?: string;
   isFollowed?: boolean;
   isSponsored?: boolean;
   surface: FeedSurface;
@@ -114,6 +124,8 @@ export interface SeedSets {
   hnVideos: Set<string>;
   hnChannels: Set<string>;
   slopChannels: Set<string>;
+  /** Normalized X handles you liked/bookmarked: exempt from bait/cadence filters, not topic mutes. Personal, never committed. */
+  personalAllow: Set<string>;
 }
 
 export interface CreatorRecord {

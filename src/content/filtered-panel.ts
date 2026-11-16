@@ -14,6 +14,10 @@ const REASON_LABELS: Record<DropReason, string> = {
   remembered: "dropped before",
   "learned-creator": "creator usually dropped",
   ratio: "ratio'd",
+  politics: "politics",
+  sports: "sports",
+  "pop-culture": "pop culture",
+  "viral-bait": "viral clip / bait",
   llm: "llm grader",
 };
 
