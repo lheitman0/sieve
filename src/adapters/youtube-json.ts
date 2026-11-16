@@ -150,6 +150,7 @@ function extractFromVideoRenderer(renderer: JsonRecord, surface: FeedSurface): F
     id,
     creatorId: channelId,
     creatorHandle: channelName || undefined,
+    ...(channelName ? { creatorProfile: channelName } : {}),
     surface,
     titleOrText: title,
     durationSec,
@@ -226,6 +227,7 @@ function extractFromLockup(lockup: JsonRecord, surface: FeedSurface): FeedItem |
     id,
     creatorId: browseId || (channelDisplayName ? channelDisplayName : undefined),
     creatorHandle: handle || channelDisplayName || undefined,
+    ...(channelDisplayName ? { creatorProfile: channelDisplayName } : {}),
     surface,
     titleOrText: title,
     ...(contextParts.length > 0 ? { secondaryText: contextParts.join(" · ") } : {}),
@@ -476,7 +478,11 @@ export async function rewriteYouTubeHtmlInitialData(
 
   try {
     const parsed: unknown = JSON.parse(html.slice(openBrace, closeBrace + 1));
-    const filtered = await filterYouTubeJson(parsed, "/youtubei/v1/browse", pageUrl, config, decide);
+    // Server-rendered pages carry the same payload their API endpoint would; label it by page.
+    const pagePath = new URL(pageUrl).pathname;
+    const endpoint =
+      pagePath === "/results" ? "/youtubei/v1/search" : pagePath === "/watch" ? "/youtubei/v1/next" : "/youtubei/v1/browse";
+    const filtered = await filterYouTubeJson(parsed, endpoint, pageUrl, config, decide);
     const safeSerialized = JSON.stringify(filtered).replace(/<\//g, "<\\/");
     return html.slice(0, openBrace) + safeSerialized + html.slice(closeBrace + 1);
   } catch {

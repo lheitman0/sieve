@@ -18,6 +18,7 @@ const REASON_LABELS: Record<DropReason, string> = {
   sports: "sports",
   "pop-culture": "pop culture",
   "viral-bait": "viral clip / bait",
+  clickbait: "clickbait",
   llm: "llm grader",
 };
 

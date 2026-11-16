@@ -13,7 +13,7 @@ import type {
 import { normalizeHandle } from "./dehype.js";
 import { gradeItemsBatch } from "./llm.js";
 import { isStructuralSlop } from "./slop-cadence.js";
-import { isViralBait, matchMutedTopic, type MutedTopic } from "./topics.js";
+import { isClickbaitTitle, isShortMediaOrQuote, isViralBait, matchMutedTopic, type MutedTopic } from "./topics.js";
 
 const COMMENT_BAIT_RE =
   /\bcomment\s+["'“”]?[a-z0-9_-]{2,20}["'“”]?\s+(and\s+i'?ll|to\s+get|for\s+the|for\s+my)\s+(dm|send|link|free|guide|template)\b/i;
@@ -68,6 +68,25 @@ const TEXT_PATTERNS: ReadonlyArray<readonly [RegExp, DropReason]> = [
   [GOSSIP_DOMAIN_RE, "gossip"],
 ];
 
+/**
+ * Topic and bait mutes apply to algorithmic feeds only: X For You, YouTube home and up-next.
+ * Pinned topic tabs, lists, Explore, search and channel pages are feeds you opened on purpose.
+ */
+function mutedTopicsFor(item: FeedItem, config: SieveConfig): Set<MutedTopic> | undefined {
+  const settings =
+    item.platform === "x" && item.surface === "home"
+      ? config.x
+      : item.platform === "youtube" && (item.surface === "home" || item.surface === "watch_next")
+        ? config.youtube
+        : undefined;
+  if (!settings) return undefined;
+  const muted = new Set<MutedTopic>();
+  if (settings.mutePolitics) muted.add("politics");
+  if (settings.muteSports) muted.add("sports");
+  if (settings.mutePopCulture) muted.add("pop-culture");
+  return muted;
+}
+
 export function evaluateLocalTiers(
   item: FeedItem,
   config: SieveConfig,
@@ -88,7 +107,32 @@ export function evaluateLocalTiers(
     if (keys.some((k) => allowed.has(k))) return KEEP;
   }
 
-  if (config.passFollowed && item.isFollowed) return KEEP;
+  const followed = item.isFollowed === true || keys.some((k) => seeds.personalFollows.has(k));
+  if (config.passFollowed && followed) return KEEP;
+
+  const muted = followed ? undefined : mutedTopicsFor(item, config);
+  if (muted) {
+    const author = { handle: item.creatorHandle, profile: item.creatorProfile };
+    const topic =
+      muted.size === 0
+        ? undefined
+        : item.platform === "x"
+          ? matchMutedTopic(`${item.titleOrText} ${item.secondaryText ?? ""}`, author, muted, {
+              accountAlone: isShortMediaOrQuote(item.titleOrText, item.secondaryText),
+              broad: false,
+            })
+          : matchMutedTopic(item.titleOrText, author, muted, { accountAlone: true, broad: true });
+    if (topic) return drop(topic);
+    // Creators you liked: their style is trusted, but topics you muted still apply.
+    if (keys.some((k) => seeds.personalAllow.has(k))) return KEEP;
+    if (item.platform === "x") {
+      if (config.x.muteViralBait && isViralBait(item.titleOrText, item.secondaryText, item.metrics?.likes)) {
+        return drop("viral-bait");
+      }
+    } else if (config.youtube.muteClickbait && isClickbaitTitle(item.titleOrText)) {
+      return drop("clickbait");
+    }
+  }
 
   if (item.platform === "youtube" && seeds.hnVideos.has(item.id)) return KEEP;
   if (keys.some((k) => seeds.hnChannels.has(k))) return KEEP;
@@ -103,31 +147,7 @@ export function evaluateLocalTiers(
     if (pattern.test(fullText)) return drop(reason);
   }
 
-  // Topic and bait mutes apply to the algorithmic For You feed only. Pinned topic tabs
-  // (e.g. an NBA timeline), lists, Explore and search are feeds you opened on purpose.
-  if (item.platform === "x" && item.surface === "home" && !item.isFollowed) {
-    const muted = new Set<MutedTopic>();
-    if (config.x.mutePolitics) muted.add("politics");
-    if (config.x.muteSports) muted.add("sports");
-    if (config.x.mutePopCulture) muted.add("pop-culture");
-    const topic =
-      muted.size > 0
-        ? matchMutedTopic(
-            item.titleOrText,
-            item.secondaryText,
-            { handle: item.creatorHandle, profile: item.creatorProfile },
-            muted,
-          )
-        : undefined;
-    if (topic) return drop(topic);
-    // Authors you liked/bookmarked: their style is trusted, but topics you muted still apply.
-    if (keys.some((k) => seeds.personalAllow.has(k))) return KEEP;
-    if (config.x.muteViralBait && isViralBait(item.titleOrText, item.secondaryText, item.metrics?.likes)) {
-      return drop("viral-bait");
-    }
-  }
-
-  if (!item.isFollowed) {
+  if (!followed) {
     if (item.platform === "x" && config.x.slopCadenceFilter) {
       if (isStructuralSlop(item.titleOrText, {}, 65)) return drop("slop-cadence");
     } else if (item.platform !== "youtube") {
@@ -147,7 +167,7 @@ export function evaluateLocalTiers(
     if (learned) return learned === "drop" ? drop("learned-creator") : KEEP;
   }
 
-  if (item.platform === "x" && !item.isFollowed && item.metrics) {
+  if (item.platform === "x" && !followed && item.metrics) {
     const likes = item.metrics.likes ?? 0;
     const replies = item.metrics.replies ?? 0;
     const quotes = item.metrics.quotes ?? 0;

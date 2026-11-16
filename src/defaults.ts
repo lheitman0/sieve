@@ -32,6 +32,10 @@ export const DEFAULT_CONFIG: SieveConfig = {
     midFrameThumbs: true,
     calmTitles: true,
     dearrowTitles: true,
+    mutePolitics: true,
+    muteSports: true,
+    mutePopCulture: true,
+    muteClickbait: true,
   },
   x: {
     enabled: true,
@@ -106,6 +110,10 @@ export function mergeConfig(stored?: unknown): SieveConfig {
       midFrameThumbs: bool(yt, "midFrameThumbs", d.youtube.midFrameThumbs),
       calmTitles: bool(yt, "calmTitles", d.youtube.calmTitles),
       dearrowTitles: bool(yt, "dearrowTitles", d.youtube.dearrowTitles),
+      mutePolitics: bool(yt, "mutePolitics", d.youtube.mutePolitics),
+      muteSports: bool(yt, "muteSports", d.youtube.muteSports),
+      mutePopCulture: bool(yt, "mutePopCulture", d.youtube.mutePopCulture),
+      muteClickbait: bool(yt, "muteClickbait", d.youtube.muteClickbait),
     },
     x: {
       enabled: bool(x, "enabled", d.x.enabled),

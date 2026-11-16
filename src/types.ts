@@ -24,6 +24,7 @@ export type DropReason =
   | "sports"
   | "pop-culture"
   | "viral-bait"
+  | "clickbait"
   | "llm";
 
 export type TierDecision = { verdict: "drop"; reason: DropReason } | { verdict: "keep" | "uncertain" };
@@ -44,6 +45,10 @@ interface YouTubeSettings {
   midFrameThumbs: boolean;
   calmTitles: boolean;
   dearrowTitles: boolean;
+  mutePolitics: boolean;
+  muteSports: boolean;
+  mutePopCulture: boolean;
+  muteClickbait: boolean;
 }
 
 interface TwitterSettings {
@@ -104,7 +109,7 @@ export interface FeedItem {
   id: string;
   creatorId?: string;
   creatorHandle?: string;
-  /** Creator bio and affiliation label, used to recognise topic accounts (sports media, etc.). */
+  /** Who the creator is: X bio + affiliation label, or a YouTube channel's display name. Recognises topic accounts. */
   creatorProfile?: string;
   isFollowed?: boolean;
   isSponsored?: boolean;
@@ -124,8 +129,10 @@ export interface SeedSets {
   hnVideos: Set<string>;
   hnChannels: Set<string>;
   slopChannels: Set<string>;
-  /** Normalized X handles you liked/bookmarked: exempt from bait/cadence filters, not topic mutes. Personal, never committed. */
+  /** Normalized handles/channel ids you liked: exempt from bait/cadence filters, not topic mutes. Personal, never committed. */
   personalAllow: Set<string>;
+  /** Normalized channel ids you subscribe to (feeds that lack a follow flag). Treated as followed. Personal, never committed. */
+  personalFollows: Set<string>;
 }
 
 export interface CreatorRecord {

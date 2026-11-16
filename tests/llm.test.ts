@@ -4,8 +4,10 @@ import type { FeedItem, MemoryStore, ResolvedVerdict, SeedSets, SieveConfig } fr
 import { gradeItemsBatch, parseIndexedVerdicts } from "../src/core/llm.js";
 import { runSieveOnBatch } from "../src/core/sieve.js";
 
+// Grader tests need items the local rules leave undecided, so local clickbait muting is off.
 const LOCAL_GRADER_CONFIG: SieveConfig = {
   ...DEFAULT_CONFIG,
+  youtube: { ...DEFAULT_CONFIG.youtube, muteClickbait: false },
   grader: { ...DEFAULT_CONFIG.grader, mode: "local" },
 };
 
@@ -63,6 +65,7 @@ describe("gradeItemsBatch and runSieveOnBatch", () => {
       hnChannels: new Set(),
       slopChannels: new Set(),
       personalAllow: new Set(),
+      personalFollows: new Set(),
     };
     const mockFetch: typeof fetch = async () =>
       new Response(
@@ -96,6 +99,7 @@ describe("gradeItemsBatch and runSieveOnBatch", () => {
       hnChannels: new Set(),
       slopChannels: new Set(),
       personalAllow: new Set(),
+      personalFollows: new Set(),
     };
     const fastTimeoutConfig: SieveConfig = {
       ...LOCAL_GRADER_CONFIG,
@@ -146,6 +150,7 @@ describe("gradeItemsBatch and runSieveOnBatch", () => {
       hnChannels: new Set(),
       slopChannels: new Set(),
       personalAllow: new Set(),
+      personalFollows: new Set(),
     };
     const failingFetch: typeof fetch = async () => new Response("Unavailable", { status: 503 });
 

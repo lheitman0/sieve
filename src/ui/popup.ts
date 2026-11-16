@@ -98,6 +98,34 @@ const PLATFORM_CARDS: PlatformCardSpec[] = [
           c.youtube.dearrowTitles = v;
         },
       },
+      {
+        label: "mute politics",
+        get: (c) => c.youtube.mutePolitics,
+        set: (c, v) => {
+          c.youtube.mutePolitics = v;
+        },
+      },
+      {
+        label: "mute sports",
+        get: (c) => c.youtube.muteSports,
+        set: (c, v) => {
+          c.youtube.muteSports = v;
+        },
+      },
+      {
+        label: "mute pop culture",
+        get: (c) => c.youtube.mutePopCulture,
+        set: (c, v) => {
+          c.youtube.mutePopCulture = v;
+        },
+      },
+      {
+        label: "mute clickbait",
+        get: (c) => c.youtube.muteClickbait,
+        set: (c, v) => {
+          c.youtube.muteClickbait = v;
+        },
+      },
     ],
   },
   {

@@ -31,7 +31,11 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
       cleanHeader: true,
       midFrameThumbs: true,
       calmTitles: true,
-      dearrowTitles: true
+      dearrowTitles: true,
+      mutePolitics: true,
+      muteSports: true,
+      mutePopCulture: true,
+      muteClickbait: true
     },
     x: {
       enabled: true,
@@ -99,7 +103,11 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
         cleanHeader: bool(yt, "cleanHeader", d.youtube.cleanHeader),
         midFrameThumbs: bool(yt, "midFrameThumbs", d.youtube.midFrameThumbs),
         calmTitles: bool(yt, "calmTitles", d.youtube.calmTitles),
-        dearrowTitles: bool(yt, "dearrowTitles", d.youtube.dearrowTitles)
+        dearrowTitles: bool(yt, "dearrowTitles", d.youtube.dearrowTitles),
+        mutePolitics: bool(yt, "mutePolitics", d.youtube.mutePolitics),
+        muteSports: bool(yt, "muteSports", d.youtube.muteSports),
+        mutePopCulture: bool(yt, "mutePopCulture", d.youtube.mutePopCulture),
+        muteClickbait: bool(yt, "muteClickbait", d.youtube.muteClickbait)
       },
       x: {
         enabled: bool(x, "enabled", d.x.enabled),
@@ -220,6 +228,34 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
           get: (c) => c.youtube.dearrowTitles,
           set: (c, v) => {
             c.youtube.dearrowTitles = v;
+          }
+        },
+        {
+          label: "mute politics",
+          get: (c) => c.youtube.mutePolitics,
+          set: (c, v) => {
+            c.youtube.mutePolitics = v;
+          }
+        },
+        {
+          label: "mute sports",
+          get: (c) => c.youtube.muteSports,
+          set: (c, v) => {
+            c.youtube.muteSports = v;
+          }
+        },
+        {
+          label: "mute pop culture",
+          get: (c) => c.youtube.mutePopCulture,
+          set: (c, v) => {
+            c.youtube.mutePopCulture = v;
+          }
+        },
+        {
+          label: "mute clickbait",
+          get: (c) => c.youtube.muteClickbait,
+          set: (c, v) => {
+            c.youtube.muteClickbait = v;
           }
         }
       ]

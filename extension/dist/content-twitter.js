@@ -272,7 +272,11 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
       cleanHeader: true,
       midFrameThumbs: true,
       calmTitles: true,
-      dearrowTitles: true
+      dearrowTitles: true,
+      mutePolitics: true,
+      muteSports: true,
+      mutePopCulture: true,
+      muteClickbait: true
     },
     x: {
       enabled: true,
@@ -340,7 +344,11 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
         cleanHeader: bool(yt, "cleanHeader", d.youtube.cleanHeader),
         midFrameThumbs: bool(yt, "midFrameThumbs", d.youtube.midFrameThumbs),
         calmTitles: bool(yt, "calmTitles", d.youtube.calmTitles),
-        dearrowTitles: bool(yt, "dearrowTitles", d.youtube.dearrowTitles)
+        dearrowTitles: bool(yt, "dearrowTitles", d.youtube.dearrowTitles),
+        mutePolitics: bool(yt, "mutePolitics", d.youtube.mutePolitics),
+        muteSports: bool(yt, "muteSports", d.youtube.muteSports),
+        mutePopCulture: bool(yt, "mutePopCulture", d.youtube.mutePopCulture),
+        muteClickbait: bool(yt, "muteClickbait", d.youtube.muteClickbait)
       },
       x: {
         enabled: bool(x, "enabled", d.x.enabled),
@@ -400,6 +408,7 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
     sports: "sports",
     "pop-culture": "pop culture",
     "viral-bait": "viral clip / bait",
+    clickbait: "clickbait",
     llm: "llm grader"
   };
   var PLATFORMS = /* @__PURE__ */ new Set(["youtube", "x", "instagram", "tiktok"]);

@@ -326,4 +326,17 @@ describe("rewriteYouTubeHtmlInitialData", () => {
     expect(out).not.toContain("dropVid0002");
     expect(out.match(/<\/script>/gi)).toHaveLength(1);
   });
+
+  it("labels server-rendered results pages as search so feed-only mutes never touch them", async () => {
+    const initial = { contents: { items: [{ videoRenderer: { videoId: "srchVid0001", title: { simpleText: "NBA highlights" } } }] } };
+    const html = `<script>var ytInitialData = ${JSON.stringify(initial)};</script>`;
+    const surfaces: string[] = [];
+    const capture = async (items: { surface: string }[]) => {
+      surfaces.push(...items.map((i) => i.surface));
+      return new Set<string>();
+    };
+    await rewriteYouTubeHtmlInitialData(html, "https://www.youtube.com/results?search_query=nba", DEFAULT_CONFIG, capture);
+    await rewriteYouTubeHtmlInitialData(html, "https://www.youtube.com/", DEFAULT_CONFIG, capture);
+    expect(surfaces).toEqual(["search", "home"]);
+  });
 });

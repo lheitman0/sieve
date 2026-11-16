@@ -9,6 +9,7 @@ function makeSeeds(overrides: Partial<SeedSets> = {}): SeedSets {
     hnChannels: overrides.hnChannels ?? new Set(["3blue1brown", "uc_hn_trusted"]),
     slopChannels: overrides.slopChannels ?? new Set(["aislopfarm99", "uc_slop_1"]),
     personalAllow: overrides.personalAllow ?? new Set(),
+    personalFollows: overrides.personalFollows ?? new Set(),
   };
 }
 
@@ -259,5 +260,50 @@ describe("X topic mutes", () => {
     expect(decide(post({ ...nbaClip, surface: "home" })).verdict).toBe("drop");
     expect(decide(post({ ...nbaClip, surface: "timeline" })).verdict).toBe("uncertain");
     expect(decide(post({ ...nbaClip, surface: "search" })).verdict).toBe("uncertain");
+  });
+});
+
+describe("YouTube topic mutes (broad scope)", () => {
+  const video = (overrides: Partial<FeedItem>): FeedItem => ({
+    platform: "youtube",
+    id: "vid00000001",
+    creatorId: "UCsomeone",
+    surface: "home",
+    titleOrText: "",
+    ...overrides,
+  });
+  const decide = (item: FeedItem, seeds = makeSeeds()) => evaluateLocalTiers(item, DEFAULT_CONFIG, seeds, emptyMemory);
+
+  it("mutes on the channel name alone in home and up-next, but never in search", () => {
+    const golf = { creatorHandle: "Grant Horvat Golf", creatorProfile: "Grant Horvat Golf", titleOrText: "My First Match Against Big John!" };
+    expect(decide(video(golf))).toEqual({ verdict: "drop", reason: "sports" });
+    expect(decide(video({ ...golf, surface: "watch_next" })).verdict).toBe("drop");
+    expect(decide(video({ ...golf, surface: "search" })).verdict).toBe("uncertain");
+  });
+
+  it("keeps channels you subscribe to, whatever the topic", () => {
+    const seeds = makeSeeds({ personalFollows: new Set(["ucsubbed"]) });
+    const subbed = video({ creatorId: "UCsubbed", creatorProfile: "NBA", titleOrText: "PACERS at 76ERS | FULL GAME HIGHLIGHTS" });
+    expect(decide(subbed, seeds).verdict).toBe("keep");
+  });
+
+  it("lets your mutes override the Hacker News trusted-channel list", () => {
+    const seeds = makeSeeds({ hnChannels: new Set(["@nprmusic"]) });
+    const tinyDesk = video({ creatorHandle: "@nprmusic", creatorProfile: "NPR Music", titleOrText: "Billy Strings: Tiny Desk Concert" });
+    expect(decide(tinyDesk, seeds)).toEqual({ verdict: "drop", reason: "pop-culture" });
+  });
+
+  it("separates clickbait from ordinary emphatic titles", () => {
+    expect(decide(video({ titleOrText: "THE STORM DESTROYED MY $1.7M YACHT" }))).toEqual({ verdict: "drop", reason: "clickbait" });
+    expect(decide(video({ titleOrText: "The Insane Real Engineering of the Nazi Enigma Machine" })).verdict).toBe("uncertain");
+    expect(decide(video({ titleOrText: "SemiFinal • Magnus Carlsen VS Hikaru Nakamura • Esport World Cup 2025" })).verdict).toBe("uncertain");
+  });
+
+  it("exempts channels you liked from clickbait but not from topic mutes", () => {
+    const seeds = makeSeeds({ personalAllow: new Set(["ucliked"]) });
+    const shouty = video({ creatorId: "UCliked", titleOrText: "GUESS THE ELO 3.0!!!!!!!!" });
+    const sports = video({ creatorId: "UCliked", titleOrText: "Rory McIlroy's RECORD round of 62 | DP World Tour" });
+    expect(decide(shouty, seeds).verdict).toBe("keep");
+    expect(decide(sports, seeds)).toEqual({ verdict: "drop", reason: "sports" });
   });
 });

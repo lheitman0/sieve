@@ -576,7 +576,11 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
       cleanHeader: true,
       midFrameThumbs: true,
       calmTitles: true,
-      dearrowTitles: true
+      dearrowTitles: true,
+      mutePolitics: true,
+      muteSports: true,
+      mutePopCulture: true,
+      muteClickbait: true
     },
     x: {
       enabled: true,
@@ -644,7 +648,11 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
         cleanHeader: bool(yt, "cleanHeader", d.youtube.cleanHeader),
         midFrameThumbs: bool(yt, "midFrameThumbs", d.youtube.midFrameThumbs),
         calmTitles: bool(yt, "calmTitles", d.youtube.calmTitles),
-        dearrowTitles: bool(yt, "dearrowTitles", d.youtube.dearrowTitles)
+        dearrowTitles: bool(yt, "dearrowTitles", d.youtube.dearrowTitles),
+        mutePolitics: bool(yt, "mutePolitics", d.youtube.mutePolitics),
+        muteSports: bool(yt, "muteSports", d.youtube.muteSports),
+        mutePopCulture: bool(yt, "mutePopCulture", d.youtube.mutePopCulture),
+        muteClickbait: bool(yt, "muteClickbait", d.youtube.muteClickbait)
       },
       x: {
         enabled: bool(x, "enabled", d.x.enabled),
@@ -1044,7 +1052,7 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
         "la liga",
         "serie a",
         "bundesliga",
-        "world cup",
+        "fifa world cup",
         "super bowl",
         "stanley cup",
         "world series",
@@ -1254,22 +1262,172 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
       profile: wordRe(["entertainment news", "celebrity news", "pop culture", "film news", "tv news", "saturday night live"])
     }
   };
+  var BROAD_EXTRAS = {
+    politics: {
+      strong: wordRe([
+        "the president",
+        "white house correspondents",
+        "russia-ukraine",
+        "ukraine war",
+        "prigozhin",
+        "palestine",
+        "israel",
+        "obama",
+        "clinton",
+        "kennedy assassination",
+        "rfk",
+        "kushner",
+        "sean duffy",
+        "vivek"
+      ]),
+      profile: wordRe([
+        "politics",
+        "political",
+        "news network",
+        "fox news",
+        "cnn",
+        "msnbc",
+        "the daily show",
+        "last week tonight"
+      ])
+    },
+    sports: {
+      strong: wordRe([
+        "golf",
+        "golfer",
+        "golfers",
+        "golfing",
+        "pga",
+        "the masters",
+        "masters tournament",
+        "the open",
+        "dp world tour",
+        "birdie",
+        "under par",
+        "tour pro",
+        "stroke play",
+        "match play",
+        "short game",
+        "pitch shot",
+        "pitch shots",
+        "tee shot",
+        "hoopers",
+        "college football",
+        "college basketball",
+        "full game highlights",
+        "game highlights",
+        "full game",
+        "game-winners",
+        "game winners",
+        "postgame",
+        "press conference",
+        "nba cup",
+        "rushing record",
+        "every throw",
+        "luka",
+        "doncic",
+        "jokic",
+        "giannis",
+        "stephen curry",
+        "sports",
+        "boxing",
+        "hockey",
+        "ronaldinho",
+        "rucker park",
+        "barstool"
+      ]),
+      profile: wordRe([
+        ...SPORTS_LEAGUES,
+        "golf",
+        "sports",
+        "sport",
+        "hoops",
+        "football",
+        "basketball",
+        "huskers",
+        "the masters",
+        "pga tour",
+        "dp world tour",
+        "the r&a",
+        "golfer's journal",
+        "fore play",
+        "good good",
+        "barstool",
+        "cyclone fanatic",
+        "nightcap",
+        "throwback",
+        "open ice",
+        "march madness",
+        "stephen curry",
+        "jon gruden"
+      ])
+    },
+    "pop-culture": {
+      strong: wordRe([
+        "snl",
+        "saturday night live",
+        "weekend update",
+        "tonight show",
+        "late night",
+        "last week tonight",
+        "john oliver",
+        "jimmy fallon",
+        "jimmy kimmel",
+        "colbert",
+        "seth meyers",
+        "conan",
+        "official video",
+        "official music video",
+        "lyric video",
+        "music video",
+        "explicit video",
+        "official audio",
+        "visualizer",
+        "official trailer",
+        "tiny desk",
+        "acoustic",
+        "live at",
+        "cover",
+        "concert",
+        "remastered"
+      ]),
+      profile: wordRe([
+        "saturday night live",
+        "snl",
+        "tonight show",
+        "late night",
+        "last week tonight",
+        "conan",
+        "team coco",
+        "npr music",
+        "vevo",
+        "records",
+        "cinema supercuts",
+        "hd videos",
+        "brothers moving"
+      ])
+    }
+  };
   var URL_OR_MENTION_RE = /https?:\/\/\S+|@\w+/g;
   var MEDIA_TAG_RE = /\[(?:video|photo|gif)(?:\+\w+)*\]/;
   var QUOTE_TAG_RE = /(?:^|\| )quoting @/;
   function ownWordCount(text) {
     return (text.replace(URL_OR_MENTION_RE, " ").match(/[\p{L}\p{N}']+/gu) ?? []).length;
   }
-  function matchMutedTopic(ownText, secondaryText, author, topics) {
-    const text = secondaryText ? `${ownText} ${secondaryText}` : ownText;
-    const shortMediaOrQuote = (MEDIA_TAG_RE.test(secondaryText ?? "") || QUOTE_TAG_RE.test(secondaryText ?? "")) && ownWordCount(ownText) <= 20;
+  function isShortMediaOrQuote(ownText, secondaryText) {
+    const context = secondaryText ?? "";
+    return (MEDIA_TAG_RE.test(context) || QUOTE_TAG_RE.test(context)) && ownWordCount(ownText) <= 20;
+  }
+  function matchMutedTopic(text, author, topics, options) {
     for (const topic of topics) {
       const lex = LEXICONS[topic];
-      if (lex.strong.test(text)) return topic;
+      const extra = options.broad ? BROAD_EXTRAS[topic] : void 0;
+      if (lex.strong.test(text) || extra?.strong.test(text) === true) return topic;
       const hits = new Set((text.match(lex.weak) ?? []).map((m) => m.toLowerCase().replace(/\s+/g, " "))).size;
-      if (hits >= lex.weakNeeded) return topic;
-      const topicAccount = author.profile !== void 0 && lex.profile.test(author.profile) || author.handle !== void 0 && lex.handle?.test(author.handle) === true;
-      if (topicAccount && (hits >= 1 || shortMediaOrQuote)) return topic;
+      if (hits >= (options.broad ? Math.min(lex.weakNeeded, 2) : lex.weakNeeded)) return topic;
+      const profile = author.profile;
+      const topicAccount = profile !== void 0 && (lex.profile.test(profile) || extra?.profile.test(profile) === true) || author.handle !== void 0 && lex.handle?.test(author.handle) === true;
+      if (topicAccount && (hits >= 1 || options.accountAlone)) return topic;
     }
     return void 0;
   }
@@ -1287,6 +1445,13 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
     const own = ownText.replace(URL_OR_MENTION_RE, " ");
     if (CRUDE_REACTION_RE.test(own)) return true;
     return hasMedia && (MILD_REACTION_RE.test(own) || words <= 3 && (likes ?? 0) >= 2e4);
+  }
+  var CLICKBAIT_RE = /\b(?:gone wrong|you won'?t believe|(?:i|we) (?:tried|survived|spent)|last to (?:leave|stop)|\$\d[\d,]*(?:k)? (?:vs|challenge)|reacts? to|reaction|exposed|destroyed|insanity|shocking)\b|[!?]{2,}/i;
+  var CAPS_HYPE_RE = /\b(?:INSANE|UNSTOPPABLE|ACED|BROKE|DESTROYS?|EXPOSED|SHOCKING|CRAZY|IMPOSSIBLE|GENIUS|ATROCIOUS|EMBARRASSING|HILARIOUS|DISGUSTINGLY|UNBELIEVABLE|LEGENDARY)\b/;
+  function isClickbaitTitle(title) {
+    const letters = title.replace(/[^A-Za-z]/g, "");
+    const shouting = letters.length >= 12 && letters.replace(/[^A-Z]/g, "").length / letters.length >= 0.7;
+    return shouting || CLICKBAIT_RE.test(title) || CAPS_HYPE_RE.test(title);
   }
 
   // src/core/sieve.ts
@@ -1326,6 +1491,15 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
     [ATTENTION_TRAP_RE, "attention-trap"],
     [GOSSIP_DOMAIN_RE, "gossip"]
   ];
+  function mutedTopicsFor(item, config2) {
+    const settings = item.platform === "x" && item.surface === "home" ? config2.x : item.platform === "youtube" && (item.surface === "home" || item.surface === "watch_next") ? config2.youtube : void 0;
+    if (!settings) return void 0;
+    const muted = /* @__PURE__ */ new Set();
+    if (settings.mutePolitics) muted.add("politics");
+    if (settings.muteSports) muted.add("sports");
+    if (settings.mutePopCulture) muted.add("pop-culture");
+    return muted;
+  }
   function evaluateLocalTiers(item, config2, seeds2, memory2, novelty2) {
     if (item.isSponsored) return drop("sponsored");
     const keys = creatorKeysFor(item);
@@ -1337,7 +1511,25 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
       const allowed = new Set(config2.allowHandles.map((h) => normalizeHandle(h)).filter(Boolean));
       if (keys.some((k) => allowed.has(k))) return KEEP;
     }
-    if (config2.passFollowed && item.isFollowed) return KEEP;
+    const followed = item.isFollowed === true || keys.some((k) => seeds2.personalFollows.has(k));
+    if (config2.passFollowed && followed) return KEEP;
+    const muted = followed ? void 0 : mutedTopicsFor(item, config2);
+    if (muted) {
+      const author = { handle: item.creatorHandle, profile: item.creatorProfile };
+      const topic = muted.size === 0 ? void 0 : item.platform === "x" ? matchMutedTopic(`${item.titleOrText} ${item.secondaryText ?? ""}`, author, muted, {
+        accountAlone: isShortMediaOrQuote(item.titleOrText, item.secondaryText),
+        broad: false
+      }) : matchMutedTopic(item.titleOrText, author, muted, { accountAlone: true, broad: true });
+      if (topic) return drop(topic);
+      if (keys.some((k) => seeds2.personalAllow.has(k))) return KEEP;
+      if (item.platform === "x") {
+        if (config2.x.muteViralBait && isViralBait(item.titleOrText, item.secondaryText, item.metrics?.likes)) {
+          return drop("viral-bait");
+        }
+      } else if (config2.youtube.muteClickbait && isClickbaitTitle(item.titleOrText)) {
+        return drop("clickbait");
+      }
+    }
     if (item.platform === "youtube" && seeds2.hnVideos.has(item.id)) return KEEP;
     if (keys.some((k) => seeds2.hnChannels.has(k))) return KEEP;
     const ytIds = item.linkedYoutubeIds ?? extractYouTubeIdsFromText(item.titleOrText);
@@ -1347,24 +1539,7 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
     for (const [pattern, reason] of TEXT_PATTERNS) {
       if (pattern.test(fullText)) return drop(reason);
     }
-    if (item.platform === "x" && item.surface === "home" && !item.isFollowed) {
-      const muted = /* @__PURE__ */ new Set();
-      if (config2.x.mutePolitics) muted.add("politics");
-      if (config2.x.muteSports) muted.add("sports");
-      if (config2.x.mutePopCulture) muted.add("pop-culture");
-      const topic = muted.size > 0 ? matchMutedTopic(
-        item.titleOrText,
-        item.secondaryText,
-        { handle: item.creatorHandle, profile: item.creatorProfile },
-        muted
-      ) : void 0;
-      if (topic) return drop(topic);
-      if (keys.some((k) => seeds2.personalAllow.has(k))) return KEEP;
-      if (config2.x.muteViralBait && isViralBait(item.titleOrText, item.secondaryText, item.metrics?.likes)) {
-        return drop("viral-bait");
-      }
-    }
-    if (!item.isFollowed) {
+    if (!followed) {
       if (item.platform === "x" && config2.x.slopCadenceFilter) {
         if (isStructuralSlop(item.titleOrText, {}, 65)) return drop("slop-cadence");
       } else if (item.platform !== "youtube") {
@@ -1380,7 +1555,7 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
       const learned = memory2.getCreatorVerdict(item.platform, key);
       if (learned) return learned === "drop" ? drop("learned-creator") : KEEP;
     }
-    if (item.platform === "x" && !item.isFollowed && item.metrics) {
+    if (item.platform === "x" && !followed && item.metrics) {
       const likes = item.metrics.likes ?? 0;
       const replies = item.metrics.replies ?? 0;
       const quotes = item.metrics.quotes ?? 0;
@@ -1987,6 +2162,7 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
       id,
       creatorId: channelId,
       creatorHandle: channelName || void 0,
+      ...channelName ? { creatorProfile: channelName } : {},
       surface,
       titleOrText: title,
       durationSec
@@ -2055,6 +2231,7 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
       id,
       creatorId: browseId || (channelDisplayName ? channelDisplayName : void 0),
       creatorHandle: handle || channelDisplayName || void 0,
+      ...channelDisplayName ? { creatorProfile: channelDisplayName } : {},
       surface,
       titleOrText: title,
       ...contextParts.length > 0 ? { secondaryText: contextParts.join(" \xB7 ") } : {},
@@ -2255,7 +2432,9 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
     if (closeBrace === -1) return html;
     try {
       const parsed = JSON.parse(html.slice(openBrace, closeBrace + 1));
-      const filtered = await filterYouTubeJson(parsed, "/youtubei/v1/browse", pageUrl, config2, decide);
+      const pagePath = new URL(pageUrl).pathname;
+      const endpoint = pagePath === "/results" ? "/youtubei/v1/search" : pagePath === "/watch" ? "/youtubei/v1/next" : "/youtubei/v1/browse";
+      const filtered = await filterYouTubeJson(parsed, endpoint, pageUrl, config2, decide);
       const safeSerialized = JSON.stringify(filtered).replace(/<\//g, "<\\/");
       return html.slice(0, openBrace) + safeSerialized + html.slice(closeBrace + 1);
     } catch {
@@ -2772,7 +2951,8 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
     hnVideos: /* @__PURE__ */ new Set(),
     hnChannels: /* @__PURE__ */ new Set(),
     slopChannels: /* @__PURE__ */ new Set(),
-    personalAllow: /* @__PURE__ */ new Set()
+    personalAllow: /* @__PURE__ */ new Set(),
+    personalFollows: /* @__PURE__ */ new Set()
   };
   var memory = createMemoryStore();
   var novelty = createNoveltyMemory();
@@ -2799,8 +2979,9 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
       loadSeedSet("assets/seeds/hn-videos.txt", seeds.hnVideos),
       loadSeedSet("assets/seeds/hn-channels.txt", seeds.hnChannels),
       loadSeedSet("assets/seeds/slop-channels.txt", seeds.slopChannels),
-      // Personal, gitignored; built from your own X likes/bookmarks. Absent in a fresh clone.
-      loadSeedSet("assets/seeds/personal-allow.txt", seeds.personalAllow)
+      // Personal, gitignored; built from your own likes/bookmarks/subscriptions. Absent in a fresh clone.
+      loadSeedSet("assets/seeds/personal-allow.txt", seeds.personalAllow),
+      loadSeedSet("assets/seeds/personal-follows.txt", seeds.personalFollows)
     ]);
   }
   browser.storage.onChanged.addListener((changes, area) => {
