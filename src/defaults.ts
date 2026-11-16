@@ -23,6 +23,7 @@ export const DEFAULT_CONFIG: SieveConfig = {
   enabled: true,
   passFollowed: true,
   noveltyFilter: true,
+  showFiltered: true,
   youtube: {
     enabled: true,
     caliberFilter: true,
@@ -91,6 +92,7 @@ export function mergeConfig(stored?: unknown): SieveConfig {
     schemaVersion: SCHEMA_VERSION,
     enabled: bool(stored, "enabled", d.enabled),
     passFollowed: bool(stored, "passFollowed", d.passFollowed),
+    showFiltered: bool(stored, "showFiltered", d.showFiltered),
     noveltyFilter: bool(stored, "noveltyFilter", d.noveltyFilter),
     youtube: {
       enabled: bool(yt, "enabled", d.youtube.enabled),

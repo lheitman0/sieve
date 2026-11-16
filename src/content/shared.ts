@@ -1,5 +1,6 @@
 import { DEFAULT_CONFIG, mergeConfig } from "../defaults.js";
 import { isRecord, type FeedItem, type SieveConfig } from "../types.js";
+import { createFilteredPanel, readFilteredPosts } from "./filtered-panel.js";
 
 const LOCAL_CACHE_KEY = "__sieve_cached_flags_v1";
 
@@ -44,21 +45,36 @@ export function bootSiteAdapter(onConfig: (config: SieveConfig) => void): void {
     }
   }
 
+  const panel = createFilteredPanel();
+  const applyConfig = (config: SieveConfig) => {
+    panel.setVisible(config.enabled && config.showFiltered);
+    onConfig(config);
+  };
+
+  browser.runtime.onMessage.addListener((raw: unknown) => {
+    if (isRecord(raw) && raw.type === "SIEVE_FILTERED") panel.add(readFilteredPosts(raw));
+    return undefined;
+  });
+  void browser.runtime
+    .sendMessage({ type: "GET_FILTERED_LOG" })
+    .then((res: unknown) => panel.add(readFilteredPosts(res)))
+    .catch(() => {});
+
   let current = structuredClone(DEFAULT_CONFIG);
   void browser.storage.local
     .get("sieveConfig")
     .then((stored) => {
       current = mergeConfig(stored.sieveConfig);
-      onConfig(current);
+      applyConfig(current);
     })
     .catch(() => {
-      onConfig(current);
+      applyConfig(current);
     });
 
   browser.storage.onChanged.addListener((changes, area) => {
     if (area === "local" && changes.sieveConfig) {
       current = mergeConfig(changes.sieveConfig.newValue);
-      onConfig(current);
+      applyConfig(current);
     }
   });
 }

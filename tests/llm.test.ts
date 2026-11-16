@@ -72,7 +72,7 @@ describe("gradeItemsBatch and runSieveOnBatch", () => {
       );
 
     const dropped = await runSieveOnBatch(sampleItems, LOCAL_GRADER_CONFIG, seeds, memory, mockFetch);
-    expect([...dropped]).toEqual(["slop2"]);
+    expect([...dropped]).toEqual([["slop2", "llm"]]);
     expect(recorded).toEqual([
       ["craft1", "keep"],
       ["slop2", "drop"],

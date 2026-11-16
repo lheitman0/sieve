@@ -15,6 +15,14 @@ interface PlatformCardSpec {
   switches: SwitchSpec[];
 }
 
+const SHOW_FILTERED_SWITCH: SwitchSpec = {
+  label: "show filtered posts on page",
+  get: (c) => c.showFiltered,
+  set: (c, v) => {
+    c.showFiltered = v;
+  },
+};
+
 const UNIVERSAL_SWITCHES: SwitchSpec[] = [
   {
     label: "pass followed creators",
@@ -417,6 +425,9 @@ async function initPopup(): Promise<void> {
       if (detailsEl) detailsEl.hidden = false;
       renderActivePlatformView(activeSpec, primaryMount, secondaryMount);
     }
+    primaryMount.appendChild(
+      renderCard("filtered posts", !config.enabled, [SHOW_FILTERED_SWITCH], config, saveAndRerender),
+    );
   }
 
   let cachedCount = 0;

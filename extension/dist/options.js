@@ -25,6 +25,7 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
     enabled: true,
     passFollowed: true,
     noveltyFilter: true,
+    showFiltered: true,
     youtube: {
       enabled: true,
       caliberFilter: true,
@@ -87,6 +88,7 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
       schemaVersion: SCHEMA_VERSION,
       enabled: bool(stored, "enabled", d.enabled),
       passFollowed: bool(stored, "passFollowed", d.passFollowed),
+      showFiltered: bool(stored, "showFiltered", d.showFiltered),
       noveltyFilter: bool(stored, "noveltyFilter", d.noveltyFilter),
       youtube: {
         enabled: bool(yt, "enabled", d.youtube.enabled),

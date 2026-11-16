@@ -568,6 +568,7 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
     enabled: true,
     passFollowed: true,
     noveltyFilter: true,
+    showFiltered: true,
     youtube: {
       enabled: true,
       caliberFilter: true,
@@ -630,6 +631,7 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
       schemaVersion: SCHEMA_VERSION,
       enabled: bool(stored, "enabled", d.enabled),
       passFollowed: bool(stored, "passFollowed", d.passFollowed),
+      showFiltered: bool(stored, "showFiltered", d.showFiltered),
       noveltyFilter: bool(stored, "noveltyFilter", d.noveltyFilter),
       youtube: {
         enabled: bool(yt, "enabled", d.youtube.enabled),
@@ -953,66 +955,78 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
     if (byHandle && byHandle !== byId) keys.push(byHandle);
     return keys;
   }
+  var KEEP = { verdict: "keep" };
+  var UNCERTAIN = { verdict: "uncertain" };
+  function drop(reason) {
+    return { verdict: "drop", reason };
+  }
+  var TEXT_PATTERNS = [
+    [COMMENT_BAIT_RE, "comment-bait"],
+    [CRYPTO_CASINO_SPAM_RE, "crypto-spam"],
+    [SHORT_DRAMA_RE, "short-drama"],
+    [ATTENTION_TRAP_RE, "attention-trap"],
+    [GOSSIP_DOMAIN_RE, "gossip"]
+  ];
   function evaluateLocalTiers(item, config2, seeds2, memory2, novelty2) {
-    if (item.isSponsored) return "drop";
+    if (item.isSponsored) return drop("sponsored");
     const keys = creatorKeysFor(item);
     if (config2.blockHandles.length > 0) {
       const blocked = new Set(config2.blockHandles.map((h) => normalizeHandle(h)).filter(Boolean));
-      if (keys.some((k) => blocked.has(k))) return "drop";
+      if (keys.some((k) => blocked.has(k))) return drop("blocked");
     }
     if (config2.allowHandles.length > 0) {
       const allowed = new Set(config2.allowHandles.map((h) => normalizeHandle(h)).filter(Boolean));
-      if (keys.some((k) => allowed.has(k))) return "keep";
+      if (keys.some((k) => allowed.has(k))) return KEEP;
     }
-    if (config2.passFollowed && item.isFollowed) return "keep";
-    if (item.platform === "youtube" && seeds2.hnVideos.has(item.id)) return "keep";
-    if (keys.some((k) => seeds2.hnChannels.has(k))) return "keep";
+    if (config2.passFollowed && item.isFollowed) return KEEP;
+    if (item.platform === "youtube" && seeds2.hnVideos.has(item.id)) return KEEP;
+    if (keys.some((k) => seeds2.hnChannels.has(k))) return KEEP;
     const ytIds = item.linkedYoutubeIds ?? extractYouTubeIdsFromText(item.titleOrText);
-    if (ytIds.some((vid) => seeds2.hnVideos.has(vid))) return "keep";
-    if (keys.some((k) => seeds2.slopChannels.has(k))) return "drop";
+    if (ytIds.some((vid) => seeds2.hnVideos.has(vid))) return KEEP;
+    if (keys.some((k) => seeds2.slopChannels.has(k))) return drop("slop-list");
     const fullText = `${item.titleOrText} ${item.secondaryText ?? ""}`;
-    if (COMMENT_BAIT_RE.test(fullText) || CRYPTO_CASINO_SPAM_RE.test(fullText) || SHORT_DRAMA_RE.test(fullText) || ATTENTION_TRAP_RE.test(fullText) || GOSSIP_DOMAIN_RE.test(fullText)) {
-      return "drop";
+    for (const [pattern, reason] of TEXT_PATTERNS) {
+      if (pattern.test(fullText)) return drop(reason);
     }
     if (!item.isFollowed) {
       if (item.platform === "x" && config2.x.slopCadenceFilter) {
-        if (isStructuralSlop(item.titleOrText, {}, 65)) return "drop";
+        if (isStructuralSlop(item.titleOrText, {}, 65)) return drop("slop-cadence");
       } else if (item.platform !== "youtube") {
-        if (isStructuralSlop(item.titleOrText, {}, 74)) return "drop";
+        if (isStructuralSlop(item.titleOrText, {}, 74)) return drop("slop-cadence");
       }
       if (config2.noveltyFilter && novelty2?.isRedundantRehash(item.titleOrText)) {
-        return "drop";
+        return drop("rehash");
       }
     }
     const cachedVerdict = memory2.getItemVerdict(item.platform, item.id);
-    if (cachedVerdict) return cachedVerdict;
+    if (cachedVerdict) return cachedVerdict === "drop" ? drop("remembered") : KEEP;
     for (const key of keys) {
       const learned = memory2.getCreatorVerdict(item.platform, key);
-      if (learned) return learned;
+      if (learned) return learned === "drop" ? drop("learned-creator") : KEEP;
     }
     if (item.platform === "x" && !item.isFollowed && item.metrics) {
       const likes = item.metrics.likes ?? 0;
       const replies = item.metrics.replies ?? 0;
       const quotes = item.metrics.quotes ?? 0;
       if (replies >= 40 && (replies > likes * 1.4 || quotes > likes * 1.1)) {
-        return "drop";
+        return drop("ratio");
       }
     }
-    return "uncertain";
+    return UNCERTAIN;
   }
   async function runSieveOnBatch(items, config2, seeds2, memory2, fetchImpl = fetch, novelty2) {
-    const droppedIds = /* @__PURE__ */ new Set();
+    const dropped = /* @__PURE__ */ new Map();
     const uncertain = [];
     for (const item of items) {
-      const localVerdict = evaluateLocalTiers(item, config2, seeds2, memory2, novelty2);
-      if (localVerdict === "drop") {
-        droppedIds.add(item.id);
-      } else if (localVerdict === "uncertain") {
+      const decision = evaluateLocalTiers(item, config2, seeds2, memory2, novelty2);
+      if (decision.verdict === "drop") {
+        dropped.set(item.id, decision.reason);
+      } else if (decision.verdict === "uncertain") {
         uncertain.push(item);
       }
     }
     if (uncertain.length === 0 || config2.grader.mode === "off") {
-      return droppedIds;
+      return dropped;
     }
     const holdMs = Math.max(50, config2.grader.streamHoldMs || DEFAULT_CONFIG.grader.streamHoldMs);
     const gradingPromise = gradeItemsBatch(uncertain, config2, fetchImpl).then(async (llmDrops) => {
@@ -1032,9 +1046,9 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
     ]);
     if (timer) clearTimeout(timer);
     if (outcome !== timedOut) {
-      for (const id of outcome) droppedIds.add(id);
+      for (const id of outcome) dropped.set(id, "llm");
     }
-    return droppedIds;
+    return dropped;
   }
 
   // src/adapters/twitter-json.ts
@@ -1857,6 +1871,61 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
     }
   }
 
+  // src/background/filtered-log.ts
+  var MAX_POSTS_PER_TAB = 200;
+  var MAX_TEXT_CHARS = 280;
+  function postUrl(item) {
+    switch (item.platform) {
+      case "youtube":
+        return /^[\w-]{11}$/.test(item.id) ? `https://www.youtube.com/watch?v=${item.id}` : void 0;
+      case "x":
+        return /^\d+$/.test(item.id) ? `https://x.com/i/status/${item.id}` : void 0;
+      case "instagram":
+        return item.creatorHandle ? `https://www.instagram.com/${encodeURIComponent(item.creatorHandle)}/` : void 0;
+      case "tiktok":
+        return item.creatorHandle && /^\d+$/.test(item.id) ? `https://www.tiktok.com/@${encodeURIComponent(item.creatorHandle)}/video/${item.id}` : void 0;
+    }
+  }
+  function createFilteredLog() {
+    const byTab = /* @__PURE__ */ new Map();
+    return {
+      record(tabId, items, dropped) {
+        if (tabId < 0 || dropped.size === 0) return [];
+        const posts = byTab.get(tabId) ?? [];
+        const seen = new Set(posts.map((p) => `${p.platform}:${p.id}`));
+        const fresh = [];
+        const at = Date.now();
+        for (const item of items) {
+          const reason = dropped.get(item.id);
+          const key = `${item.platform}:${item.id}`;
+          if (!reason || seen.has(key)) continue;
+          seen.add(key);
+          fresh.push({
+            platform: item.platform,
+            id: item.id,
+            creator: item.creatorHandle || item.creatorId,
+            text: item.titleOrText.slice(0, MAX_TEXT_CHARS),
+            reason,
+            url: postUrl(item),
+            at
+          });
+        }
+        if (fresh.length > 0) {
+          posts.push(...fresh);
+          if (posts.length > MAX_POSTS_PER_TAB) posts.splice(0, posts.length - MAX_POSTS_PER_TAB);
+          byTab.set(tabId, posts);
+        }
+        return fresh;
+      },
+      get(tabId) {
+        return byTab.get(tabId) ?? [];
+      },
+      forget(tabId) {
+        byTab.delete(tabId);
+      }
+    };
+  }
+
   // src/background/memory.ts
   var ITEM_TTL_MS = 30 * 24 * 60 * 60 * 1e3;
   var CREATOR_TTL_MS = 14 * 24 * 60 * 60 * 1e3;
@@ -2344,11 +2413,23 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
       config = mergeConfig(changes.sieveConfig.newValue);
     }
   });
-  var decideBatch = async (items) => {
-    const dropped = await runSieveOnBatch(items, config, seeds, memory, fetch, novelty);
-    sessionFilteredCount += dropped.size;
-    return dropped;
-  };
+  var filteredLog = createFilteredLog();
+  browser.tabs.onRemoved.addListener((tabId) => {
+    filteredLog.forget(tabId);
+  });
+  function deciderForTab(tabId) {
+    return async (items) => {
+      const dropped = await runSieveOnBatch(items, config, seeds, memory, fetch, novelty);
+      sessionFilteredCount += dropped.size;
+      const fresh = filteredLog.record(tabId, items, dropped);
+      if (fresh.length > 0) {
+        const message = { type: "SIEVE_FILTERED", posts: fresh };
+        browser.tabs.sendMessage(tabId, message).catch(() => {
+        });
+      }
+      return new Set(dropped.keys());
+    };
+  }
   var INTERCEPT_URLS = [
     "https://www.youtube.com/",
     "https://www.youtube.com/?*",
@@ -2449,6 +2530,7 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
           const host = parsedUrl.hostname;
           const path = parsedUrl.pathname;
           const pageUrl = details.documentUrl || details.originUrl || details.url;
+          const decideBatch = deciderForTab(details.tabId);
           if (details.type === "main_frame" && host.endsWith("youtube.com")) {
             const rewritten = await rewriteYouTubeHtmlInitialData(
               text,
@@ -2541,7 +2623,7 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
       streamHoldMs: raw.streamHoldMs
     };
   }
-  browser.runtime.onMessage.addListener((raw) => {
+  browser.runtime.onMessage.addListener((raw, sender) => {
     if (!isRecord(raw) || typeof raw.type !== "string") return void 0;
     if (raw.type === "GET_STATUS") {
       const stats = memory.counts();
@@ -2582,9 +2664,13 @@ ${VERDICT_OUTPUT_INSTRUCTIONS}`
       const items = raw.items.filter(
         (item) => isRecord(item) && typeof item.id === "string" && typeof item.titleOrText === "string"
       );
-      return decideBatch(items).then(
+      return deciderForTab(sender.tab?.id ?? -1)(items).then(
         (dropped) => ({ dropped: [...dropped] })
       );
+    }
+    if (raw.type === "GET_FILTERED_LOG") {
+      const response = { posts: filteredLog.get(sender.tab?.id ?? -1) };
+      return Promise.resolve(response);
     }
     if (raw.type === "TEST_GRADER") {
       const override = parseGraderOverride(raw.graderOverride);

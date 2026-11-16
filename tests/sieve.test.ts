@@ -27,7 +27,7 @@ describe("evaluateLocalTiers", () => {
       surface: "timeline",
       titleOrText: "Buy our enterprise SaaS",
     };
-    expect(evaluateLocalTiers(item, DEFAULT_CONFIG, makeSeeds(), emptyMemory)).toBe("drop");
+    expect(evaluateLocalTiers(item, DEFAULT_CONFIG, makeSeeds(), emptyMemory).verdict).toBe("drop");
   });
 
   it("keeps followed creators when passFollowed is enabled", () => {
@@ -39,7 +39,7 @@ describe("evaluateLocalTiers", () => {
       surface: "reels",
       titleOrText: "glaze test #41",
     };
-    expect(evaluateLocalTiers(item, DEFAULT_CONFIG, makeSeeds(), emptyMemory)).toBe("keep");
+    expect(evaluateLocalTiers(item, DEFAULT_CONFIG, makeSeeds(), emptyMemory).verdict).toBe("keep");
   });
 
   it("keeps HackerTube canonical video IDs and HN-trusted channels", () => {
@@ -57,8 +57,8 @@ describe("evaluateLocalTiers", () => {
       surface: "home",
       titleOrText: "New visual proof",
     };
-    expect(evaluateLocalTiers(byVid, DEFAULT_CONFIG, makeSeeds(), emptyMemory)).toBe("keep");
-    expect(evaluateLocalTiers(byChannel, DEFAULT_CONFIG, makeSeeds(), emptyMemory)).toBe("keep");
+    expect(evaluateLocalTiers(byVid, DEFAULT_CONFIG, makeSeeds(), emptyMemory).verdict).toBe("keep");
+    expect(evaluateLocalTiers(byChannel, DEFAULT_CONFIG, makeSeeds(), emptyMemory).verdict).toBe("keep");
   });
 
   it("drops known AiSList slop channels and explicit user blockHandles", () => {
@@ -80,8 +80,14 @@ describe("evaluateLocalTiers", () => {
       surface: "timeline",
       titleOrText: "Here are 10 prompts to get rich",
     };
-    expect(evaluateLocalTiers(slop, config, makeSeeds(), emptyMemory)).toBe("drop");
-    expect(evaluateLocalTiers(blocked, config, makeSeeds(), emptyMemory)).toBe("drop");
+    expect(evaluateLocalTiers(slop, config, makeSeeds(), emptyMemory)).toEqual({
+      verdict: "drop",
+      reason: "slop-list",
+    });
+    expect(evaluateLocalTiers(blocked, config, makeSeeds(), emptyMemory)).toEqual({
+      verdict: "drop",
+      reason: "blocked",
+    });
   });
 
   it("drops unfollowed X posts with extreme ragebait reply-to-like ratios", () => {
@@ -94,7 +100,7 @@ describe("evaluateLocalTiers", () => {
       titleOrText: "Anyone who cooks at home is wasting their life",
       metrics: { likes: 60, replies: 210, quotes: 95 },
     };
-    expect(evaluateLocalTiers(ragebait, DEFAULT_CONFIG, makeSeeds(), emptyMemory)).toBe("drop");
+    expect(evaluateLocalTiers(ragebait, DEFAULT_CONFIG, makeSeeds(), emptyMemory).verdict).toBe("drop");
   });
 
   it("drops IG and TikTok comment-bait DM templates from unfollowed accounts", () => {
@@ -106,7 +112,7 @@ describe("evaluateLocalTiers", () => {
       surface: "reels",
       titleOrText: 'Comment "SYSTEM" and I\'ll DM you the Notion template!',
     };
-    expect(evaluateLocalTiers(bait, DEFAULT_CONFIG, makeSeeds(), emptyMemory)).toBe("drop");
+    expect(evaluateLocalTiers(bait, DEFAULT_CONFIG, makeSeeds(), emptyMemory).verdict).toBe("drop");
   });
 
   it("uses cached item and promoted creator verdicts before marking uncertain", () => {
@@ -135,9 +141,9 @@ describe("evaluateLocalTiers", () => {
       surface: "reels",
       titleOrText: "kinetic brass sculpture test",
     };
-    expect(evaluateLocalTiers(cachedDrop, DEFAULT_CONFIG, makeSeeds(), memory)).toBe("drop");
-    expect(evaluateLocalTiers(learnedKeep, DEFAULT_CONFIG, makeSeeds(), memory)).toBe("keep");
-    expect(evaluateLocalTiers(unseen, DEFAULT_CONFIG, makeSeeds(), memory)).toBe("uncertain");
+    expect(evaluateLocalTiers(cachedDrop, DEFAULT_CONFIG, makeSeeds(), memory).verdict).toBe("drop");
+    expect(evaluateLocalTiers(learnedKeep, DEFAULT_CONFIG, makeSeeds(), memory).verdict).toBe("keep");
+    expect(evaluateLocalTiers(unseen, DEFAULT_CONFIG, makeSeeds(), memory).verdict).toBe("uncertain");
   });
 
   it("auto-passes non-YouTube posts that link to HackerTube videos or belong to HN-trusted handles", () => {
@@ -161,8 +167,8 @@ describe("evaluateLocalTiers", () => {
       titleOrText: "animation test",
     };
 
-    expect(evaluateLocalTiers(tweetWithHnLink, DEFAULT_CONFIG, makeSeeds(), emptyMemory)).toBe("keep");
-    expect(evaluateLocalTiers(igFromHnCreator, DEFAULT_CONFIG, makeSeeds(), emptyMemory)).toBe("keep");
+    expect(evaluateLocalTiers(tweetWithHnLink, DEFAULT_CONFIG, makeSeeds(), emptyMemory).verdict).toBe("keep");
+    expect(evaluateLocalTiers(igFromHnCreator, DEFAULT_CONFIG, makeSeeds(), emptyMemory).verdict).toBe("keep");
   });
 
   it("drops siren-emoji fake breaking engagement bait, illegal-AI thread slop, and short-drama cliffhangers", () => {
@@ -191,8 +197,8 @@ describe("evaluateLocalTiers", () => {
       titleOrText: "Part 12 | Billionaire CEO secretly marries cleaner #reelshort #shortdrama",
     };
 
-    expect(evaluateLocalTiers(sirenBait, DEFAULT_CONFIG, makeSeeds(), emptyMemory)).toBe("drop");
-    expect(evaluateLocalTiers(illegalTools, DEFAULT_CONFIG, makeSeeds(), emptyMemory)).toBe("drop");
-    expect(evaluateLocalTiers(shortDrama, DEFAULT_CONFIG, makeSeeds(), emptyMemory)).toBe("drop");
+    expect(evaluateLocalTiers(sirenBait, DEFAULT_CONFIG, makeSeeds(), emptyMemory).verdict).toBe("drop");
+    expect(evaluateLocalTiers(illegalTools, DEFAULT_CONFIG, makeSeeds(), emptyMemory).verdict).toBe("drop");
+    expect(evaluateLocalTiers(shortDrama, DEFAULT_CONFIG, makeSeeds(), emptyMemory).verdict).toBe("drop");
   });
 });

@@ -23,6 +23,7 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
     enabled: true,
     passFollowed: true,
     noveltyFilter: true,
+    showFiltered: true,
     youtube: {
       enabled: true,
       caliberFilter: true,
@@ -85,6 +86,7 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
       schemaVersion: SCHEMA_VERSION,
       enabled: bool(stored, "enabled", d.enabled),
       passFollowed: bool(stored, "passFollowed", d.passFollowed),
+      showFiltered: bool(stored, "showFiltered", d.showFiltered),
       noveltyFilter: bool(stored, "noveltyFilter", d.noveltyFilter),
       youtube: {
         enabled: bool(yt, "enabled", d.youtube.enabled),
@@ -131,6 +133,13 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
   }
 
   // src/ui/popup.ts
+  var SHOW_FILTERED_SWITCH = {
+    label: "show filtered posts on page",
+    get: (c) => c.showFiltered,
+    set: (c, v) => {
+      c.showFiltered = v;
+    }
+  };
   var UNIVERSAL_SWITCHES = [
     {
       label: "pass followed creators",
@@ -492,6 +501,9 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
         if (detailsEl) detailsEl.hidden = false;
         renderActivePlatformView(activeSpec, primaryMount, secondaryMount);
       }
+      primaryMount.appendChild(
+        renderCard("filtered posts", !config.enabled, [SHOW_FILTERED_SWITCH], config, saveAndRerender)
+      );
     }
     let cachedCount = 0;
     const statusLine = document.getElementById("status-line");

@@ -15,8 +15,11 @@ import { runSieveOnBatch } from "../core/sieve.js";
 import { DEFAULT_CONFIG, mergeConfig } from "../defaults.js";
 import {
   isRecord,
+  type BatchDecider,
   type EvaluateSsrItemsResponse,
   type FeedItem,
+  type FilteredLogResponse,
+  type FilteredPostsMessage,
   type GraderSettings,
   type ResolveDearrowTitlesResponse,
   type SeedSets,
@@ -24,6 +27,7 @@ import {
   type SieveStatus,
   type TestGraderResponse,
 } from "../types.js";
+import { createFilteredLog } from "./filtered-log.js";
 import { createMemoryStore } from "./memory.js";
 import { createNoveltyMemory } from "./novelty.js";
 
@@ -74,11 +78,25 @@ browser.storage.onChanged.addListener((changes, area) => {
   }
 });
 
-const decideBatch = async (items: FeedItem[]): Promise<Set<string>> => {
-  const dropped = await runSieveOnBatch(items, config, seeds, memory, fetch, novelty);
-  sessionFilteredCount += dropped.size;
-  return dropped;
-};
+const filteredLog = createFilteredLog();
+
+browser.tabs.onRemoved.addListener((tabId) => {
+  filteredLog.forget(tabId);
+});
+
+function deciderForTab(tabId: number): BatchDecider {
+  return async (items) => {
+    const dropped = await runSieveOnBatch(items, config, seeds, memory, fetch, novelty);
+    sessionFilteredCount += dropped.size;
+    const fresh = filteredLog.record(tabId, items, dropped);
+    if (fresh.length > 0) {
+      const message: FilteredPostsMessage = { type: "SIEVE_FILTERED", posts: fresh };
+      // The tab's content script may not exist yet; it pulls the log on boot.
+      browser.tabs.sendMessage(tabId, message).catch(() => {});
+    }
+    return new Set(dropped.keys());
+  };
+}
 
 const INTERCEPT_URLS = [
   "https://www.youtube.com/",
@@ -207,6 +225,7 @@ browser.webRequest.onBeforeRequest.addListener(
         const host = parsedUrl.hostname;
         const path = parsedUrl.pathname;
         const pageUrl = details.documentUrl || details.originUrl || details.url;
+        const decideBatch = deciderForTab(details.tabId);
 
         if (details.type === "main_frame" && host.endsWith("youtube.com")) {
           const rewritten = await rewriteYouTubeHtmlInitialData(
@@ -320,7 +339,7 @@ function parseGraderOverride(raw: unknown): GraderSettings | undefined {
   };
 }
 
-browser.runtime.onMessage.addListener((raw: unknown) => {
+browser.runtime.onMessage.addListener((raw: unknown, sender: browser.runtime.MessageSender) => {
   if (!isRecord(raw) || typeof raw.type !== "string") return undefined;
 
   if (raw.type === "GET_STATUS") {
@@ -367,9 +386,14 @@ browser.runtime.onMessage.addListener((raw: unknown) => {
       (item): item is FeedItem =>
         isRecord(item) && typeof item.id === "string" && typeof item.titleOrText === "string",
     );
-    return decideBatch(items).then(
+    return deciderForTab(sender.tab?.id ?? -1)(items).then(
       (dropped): EvaluateSsrItemsResponse => ({ dropped: [...dropped] }),
     );
+  }
+
+  if (raw.type === "GET_FILTERED_LOG") {
+    const response: FilteredLogResponse = { posts: filteredLog.get(sender.tab?.id ?? -1) };
+    return Promise.resolve(response);
   }
 
   if (raw.type === "TEST_GRADER") {

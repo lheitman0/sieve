@@ -6,6 +6,24 @@ export type ResolvedVerdict = "keep" | "drop";
 
 export type Verdict = ResolvedVerdict | "uncertain";
 
+export type DropReason =
+  | "sponsored"
+  | "blocked"
+  | "slop-list"
+  | "comment-bait"
+  | "crypto-spam"
+  | "short-drama"
+  | "attention-trap"
+  | "gossip"
+  | "slop-cadence"
+  | "rehash"
+  | "remembered"
+  | "learned-creator"
+  | "ratio"
+  | "llm";
+
+export type TierDecision = { verdict: "drop"; reason: DropReason } | { verdict: "keep" | "uncertain" };
+
 export type GraderMode = "off" | "local" | "api";
 
 export type JsonRecord = Record<string, unknown>;
@@ -63,6 +81,7 @@ export interface SieveConfig {
   enabled: boolean;
   passFollowed: boolean;
   noveltyFilter: boolean;
+  showFiltered: boolean;
   youtube: YouTubeSettings;
   x: TwitterSettings;
   instagram: InstagramSettings;
@@ -127,13 +146,33 @@ export interface NoveltyMemory extends NoveltyLookup {
 
 export type BatchDecider = (items: FeedItem[]) => Promise<Set<string>>;
 
+export interface FilteredPost {
+  platform: Platform;
+  id: string;
+  creator?: string;
+  text: string;
+  reason: DropReason;
+  url?: string;
+  at: number;
+}
+
 export type RuntimeMessage =
   | { type: "GET_STATUS" }
   | { type: "CLEAR_CACHE" }
   | { type: "RECORD_DWELL"; text: string }
   | { type: "RESOLVE_DEARROW_TITLES"; videoIds: string[] }
   | { type: "EVALUATE_SSR_ITEMS"; items: FeedItem[] }
+  | { type: "GET_FILTERED_LOG" }
   | { type: "TEST_GRADER"; graderOverride?: GraderSettings };
+
+export interface FilteredPostsMessage {
+  type: "SIEVE_FILTERED";
+  posts: FilteredPost[];
+}
+
+export interface FilteredLogResponse {
+  posts: FilteredPost[];
+}
 
 export interface SieveStatus {
   sessionFilteredCount: number;
