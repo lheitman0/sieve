@@ -296,7 +296,7 @@ Drop items that fail Authenticity or Substance: ragebait, political or culture-w
       postOnlyMode: false
     },
     grader: {
-      mode: "local",
+      mode: "off",
       endpoint: LOCAL_DEFAULT_ENDPOINT,
       model: LOCAL_DEFAULT_MODEL,
       apiKey: "",

@@ -55,7 +55,7 @@ export const DEFAULT_CONFIG: SieveConfig = {
     postOnlyMode: false,
   },
   grader: {
-    mode: "local",
+    mode: "off",
     endpoint: LOCAL_DEFAULT_ENDPOINT,
     model: LOCAL_DEFAULT_MODEL,
     apiKey: "",

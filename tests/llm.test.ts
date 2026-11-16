@@ -4,6 +4,11 @@ import type { FeedItem, MemoryStore, ResolvedVerdict, SeedSets, SieveConfig } fr
 import { gradeItemsBatch, parseIndexedVerdicts } from "../src/core/llm.js";
 import { runSieveOnBatch } from "../src/core/sieve.js";
 
+const LOCAL_GRADER_CONFIG: SieveConfig = {
+  ...DEFAULT_CONFIG,
+  grader: { ...DEFAULT_CONFIG.grader, mode: "local" },
+};
+
 describe("parseIndexedVerdicts", () => {
   it("parses plain JSON and markdown-fenced drop arrays", () => {
     const valid = ["a", "b", "c"];
@@ -66,7 +71,7 @@ describe("gradeItemsBatch and runSieveOnBatch", () => {
         { status: 200 },
       );
 
-    const dropped = await runSieveOnBatch(sampleItems, DEFAULT_CONFIG, seeds, memory, mockFetch);
+    const dropped = await runSieveOnBatch(sampleItems, LOCAL_GRADER_CONFIG, seeds, memory, mockFetch);
     expect([...dropped]).toEqual(["slop2"]);
     expect(recorded).toEqual([
       ["craft1", "keep"],
@@ -91,8 +96,8 @@ describe("gradeItemsBatch and runSieveOnBatch", () => {
       slopChannels: new Set(),
     };
     const fastTimeoutConfig: SieveConfig = {
-      ...DEFAULT_CONFIG,
-      grader: { ...DEFAULT_CONFIG.grader, streamHoldMs: 40 },
+      ...LOCAL_GRADER_CONFIG,
+      grader: { ...LOCAL_GRADER_CONFIG.grader, streamHoldMs: 40 },
     };
 
     const slowFetch: typeof fetch = async () => {
@@ -141,11 +146,11 @@ describe("gradeItemsBatch and runSieveOnBatch", () => {
     };
     const failingFetch: typeof fetch = async () => new Response("Unavailable", { status: 503 });
 
-    await expect(gradeItemsBatch(sampleItems, DEFAULT_CONFIG, failingFetch)).rejects.toThrow(
+    await expect(gradeItemsBatch(sampleItems, LOCAL_GRADER_CONFIG, failingFetch)).rejects.toThrow(
       "HTTP 503",
     );
 
-    const dropped = await runSieveOnBatch(sampleItems, DEFAULT_CONFIG, seeds, memory, failingFetch);
+    const dropped = await runSieveOnBatch(sampleItems, LOCAL_GRADER_CONFIG, seeds, memory, failingFetch);
     expect(dropped.size).toBe(0);
     expect(recorded).toEqual([]);
   });
