@@ -42,7 +42,7 @@ describe("manifest, seeds, UI polish, and copy hygiene", () => {
     };
 
     expect(manifest.manifest_version).toBe(2);
-    expect(manifest.browser_specific_settings?.gecko?.id).toBe("sieve@twarner491.github.io");
+    expect(manifest.browser_specific_settings?.gecko?.id).toBe("sieve@lheitman0.github.io");
     expect(manifest.browser_action?.default_popup).toBe("ui/popup.html");
     expect(manifest.options_ui?.page).toBe("ui/options.html");
     expect(manifest.content_scripts?.length).toBe(4);

@@ -9,7 +9,7 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "sieve@twarner491.github.io",
+      "id": "sieve@lheitman0.github.io",
       "strict_min_version": "128.0",
       "data_collection_permissions": {
         "required": ["none"]

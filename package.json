@@ -9,7 +9,8 @@
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --exclude 'vendor/**'",
-    "lint:ext": "web-ext lint -s extension"
+    "lint:ext": "web-ext lint -s extension",
+    "sign": "node scripts/sign.mjs"
   },
   "devDependencies": {
     "@types/firefox-webext-browser": "^120.0.4",
